@@ -32,3 +32,36 @@ INSERT INTO `tbl_users`
   (`username`, `password`, `real_name`, `role`, `status`, `created_at`, `updated_at`)
 VALUES
   ('admin', '0192023a7bbd73250516f069df18b500', '系统管理员', 'admin', 1, NOW(), NOW());
+
+-- 3. 仓库表
+CREATE TABLE IF NOT EXISTS `tbl_warehouses` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`       VARCHAR(100) NOT NULL COMMENT '仓库名称',
+  `code`       VARCHAR(50) DEFAULT NULL COMMENT '仓库编码',
+  `address`    VARCHAR(200) DEFAULT NULL COMMENT '仓库地址',
+  `manager_id` INT UNSIGNED DEFAULT NULL COMMENT '管理员ID，关联 tbl_users.id',
+  `remark`     VARCHAR(200) DEFAULT NULL COMMENT '备注',
+  `status`     INT DEFAULT 1 COMMENT '状态：1 启用 0 禁用',
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tbl_warehouses_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='仓库表';
+
+-- 4. 仓位表
+CREATE TABLE IF NOT EXISTS `tbl_locations` (
+  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `warehouse_id`  INT UNSIGNED NOT NULL COMMENT '所属仓库ID，关联 tbl_warehouses.id',
+  `name`          VARCHAR(100) NOT NULL COMMENT '仓位名称',
+  `code`          VARCHAR(50) DEFAULT NULL COMMENT '仓位编码',
+  `current_stock` INT DEFAULT 0 COMMENT '当前库存',
+  `remark`        VARCHAR(200) DEFAULT NULL COMMENT '备注',
+  `status`        INT DEFAULT 1 COMMENT '状态：1 启用 0 禁用',
+  `created_at`    DATETIME DEFAULT NULL,
+  `updated_at`    DATETIME DEFAULT NULL,
+  `deleted_at`    DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tbl_locations_warehouse_id` (`warehouse_id`),
+  KEY `idx_tbl_locations_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='仓位表';

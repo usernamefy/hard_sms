@@ -1,10 +1,11 @@
 package controllers
 
 import (
-	"github.com/gin-contrib/sessions"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-contrib/sessions"
 
 	"sms/models"
 	"sms/utils"
@@ -128,7 +129,7 @@ func (c *UserController) List(ctx *gin.Context) {
 // Add 渲染新增用户页
 func (c *UserController) Add(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "user_form.html", userPageData(ctx, gin.H{
-		"title": "新增用户 - 库存管理系统",
+		"title":  "新增用户 - 库存管理系统",
 		"action": "/users/add",
 		"user":   models.User{Status: 1, Role: "admin"},
 		"isEdit": false,

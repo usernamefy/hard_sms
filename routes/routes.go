@@ -62,6 +62,21 @@ func Setup() *gin.Engine {
 		admin.GET("/users/edit/:id", controllers.UserCtl.Edit)
 		admin.POST("/users/edit/:id", controllers.UserCtl.DoEdit)
 
+		// 仓库管理
+		admin.GET("/warehouses", controllers.WarehouseCtl.List)
+		admin.GET("/warehouses/add", controllers.WarehouseCtl.Add)
+		admin.POST("/warehouses/add", controllers.WarehouseCtl.DoAdd)
+		admin.GET("/warehouses/detail/:id", controllers.WarehouseCtl.Detail)
+		admin.GET("/warehouses/edit/:id", controllers.WarehouseCtl.Edit)
+		admin.POST("/warehouses/edit/:id", controllers.WarehouseCtl.DoEdit)
+
+		// 仓位管理：列表直接嵌在仓库详情页，这里只保留新增/编辑/删除
+		admin.GET("/warehouses/detail/:id/locations/add", controllers.WarehouseCtl.LocationAdd)
+		admin.POST("/warehouses/detail/:id/locations/add", controllers.WarehouseCtl.LocationDoAdd)
+		admin.GET("/warehouses/detail/:id/locations/edit/:locId", controllers.WarehouseCtl.LocationEdit)
+		admin.POST("/warehouses/detail/:id/locations/edit/:locId", controllers.WarehouseCtl.LocationDoEdit)
+		admin.POST("/warehouses/detail/:id/locations/delete/:locId", controllers.WarehouseCtl.LocationDelete)
+
 		admin.GET("/logout", controllers.UserCtl.Logout)
 	}
 

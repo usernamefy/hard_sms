@@ -37,6 +37,24 @@ func GetUserByID(id uint) (*User, error) {
 	return &user, nil
 }
 
+// DisplayName 用户展示名：优先真实姓名，其次用户名
+func (u *User) DisplayName() string {
+	if u == nil {
+		return "-"
+	}
+	if u.RealName != "" {
+		return u.RealName
+	}
+	return u.Username
+}
+
+// ListEnabledUsers 查询全部启用状态的用户（供管理员下拉选择）
+func ListEnabledUsers() ([]User, error) {
+	var users []User
+	err := DB.Where("status = ?", 1).Order("id ASC").Find(&users).Error
+	return users, err
+}
+
 // GetUserByUsername 根据用户名查询用户
 func GetUserByUsername(username string) (*User, error) {
 	var user User

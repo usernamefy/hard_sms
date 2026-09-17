@@ -285,6 +285,21 @@ a {
     margin-bottom: 12px;
 }
 
+.card-gap-top {
+    margin-top: 20px;
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.card-head .card-title {
+    margin-bottom: 0;
+}
+
 .card-text {
     color: #475569;
     line-height: 1.8;
@@ -432,4 +447,112 @@ a {
 
 .error-page p {
     color: #64748b;
+}
+
+/* ========== 仓库 / 仓位管理 ========== */
+.page-head-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.table-link {
+    color: #4f46e5;
+    font-weight: 500;
+}
+
+.table-link:hover {
+    text-decoration: underline;
+}
+
+.form-card-wide {
+    max-width: 760px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+}
+
+.form-item--full {
+    grid-column: 1 / -1;
+}
+
+.admin-form .form-item textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-form .form-item textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.admin-form .form-item input[disabled] {
+    background: #f8fafc;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.form-checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    cursor: pointer;
+    font-weight: 400;
+}
+
+.form-checkbox-line input {
+    width: 16px;
+    height: 16px;
+    accent-color: #4f46e5;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+.inline-form {
+    display: inline-block;
+    margin-left: 6px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 32px;
+}
+
+.detail-label {
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.detail-value {
+    color: #111827;
+    font-size: 14px;
+}
+
+.detail-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
 }
