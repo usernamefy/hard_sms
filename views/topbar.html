@@ -1,0 +1,10 @@
+{{ define "topbar" }}
+<header class="topbar">
+    <div class="topbar-title">库存管理系统</div>
+    <div class="topbar-actions">
+        <span class="topbar-user">{{ .realname }}（{{ .username }}）</span>
+        <a class="btn btn-ghost" href="/">返回首页</a>
+        <a class="btn btn-outline" href="/logout">退出登录</a>
+    </div>
+</header>
+{{ end }}

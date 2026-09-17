@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="javascript:void(0)">商品入库</a>
+            <a class="menu-item" href="javascript:void(0)">仓库管理</a>
+            <a class="menu-item" href="javascript:void(0)">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item active" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head">
+            <h2>{{ if .isEdit }}编辑用户{{ else }}新增用户{{ end }}</h2>
+        </div>
+
+        <div class="card form-card">
+            {{ if .error }}
+            <div class="login-alert">{{ .error }}</div>
+            {{ end }}
+
+            <form method="post" action="{{ .action }}" class="admin-form">
+                <div class="form-item">
+                    <label for="username">用户名 <em>*</em></label>
+                    <input type="text" id="username" name="username" value="{{ .user.Username }}" required maxlength="50" placeholder="登录用户名，唯一">
+                </div>
+                <div class="form-item">
+                    <label for="password">密码 {{ if .isEdit }}（留空表示不修改）{{ else }}<em>*</em>{{ end }}</label>
+                    <input type="password" id="password" name="password" {{ if not .isEdit }}required{{ end }} minlength="6" maxlength="32" placeholder="至少 6 位">
+                </div>
+                <div class="form-item">
+                    <label for="realName">真实姓名</label>
+                    <input type="text" id="realName" name="realName" value="{{ .user.RealName }}" maxlength="50" placeholder="选填">
+                </div>
+                <div class="form-item">
+                    <label for="role">角色</label>
+                    <select id="role" name="role">
+                        <option value="admin" {{ if eq .user.Role "admin" }}selected{{ end }}>管理员</option>
+                        <option value="user" {{ if eq .user.Role "user" }}selected{{ end }}>普通用户</option>
+                    </select>
+                </div>
+                <div class="form-item">
+                    <label for="status">状态</label>
+                    <select id="status" name="status">
+                        <option value="1" {{ if eq .user.Status 1 }}selected{{ end }}>启用</option>
+                        <option value="0" {{ if eq .user.Status 0 }}selected{{ end }}>禁用</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保 存</button>
+                    <a class="btn btn-outline" href="/users">取 消</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

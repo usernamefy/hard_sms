@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+    <header class="topbar">
+        <div class="topbar-title">库存管理系统</div>
+        <div class="topbar-actions">
+            <span class="topbar-user">{{ .realname }}（{{ .username }}）</span>
+            <a class="btn btn-ghost" href="/">返回首页</a>
+            <a class="btn btn-outline" href="/logout">退出登录</a>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <nav class="menu">
+                <a class="menu-item active" href="/">主页</a>
+                <a class="menu-item" href="javascript:void(0)">商品入库</a>
+                <a class="menu-item" href="javascript:void(0)">仓库管理</a>
+                <a class="menu-item" href="javascript:void(0)">借用记录</a>
+                <a class="menu-item" href="javascript:void(0)">样品异动</a>
+                <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+                <a class="menu-item" href="/users">用户管理</a>
+                <a class="menu-item" href="javascript:void(0)">操作日志</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <div class="page-head">
+                <h2>主页</h2>
+                <p>欢迎使用库存管理系统，{{ .realname }}</p>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-num">0</div>
+                    <div class="stat-label">商品总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">0</div>
+                    <div class="stat-label">仓库数量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">0</div>
+                    <div class="stat-label">借用中</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">0</div>
+                    <div class="stat-label">待盘点</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">系统模块</div>
+                <p class="card-text">登录功能已完成，商品入库、仓库管理、借用记录、样品异动、盘点管理、用户管理、操作日志等模块将在后续迭代中实现。</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

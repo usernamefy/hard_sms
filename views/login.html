@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-body">
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-brand">
+                <div class="login-logo">库</div>
+                <h1>库存管理系统</h1>
+                <p>后台管理平台</p>
+            </div>
+
+            {{ if .error }}
+            <div class="login-alert">{{ .error }}</div>
+            {{ end }}
+
+            <form method="post" action="/login" class="login-form">
+                <div class="form-item">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" placeholder="请输入用户名" required autofocus autocomplete="username">
+                </div>
+                <div class="form-item">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login">登&nbsp;&nbsp;录</button>
+            </form>
+
+            <div class="login-tip">默认账号：admin　密码：admin123</div>
+        </div>
+    </div>
+</body>
+</html>
