@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="javascript:void(0)">商品入库</a>
+            <a class="menu-item active" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="javascript:void(0)">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>{{ if .isEdit }}编辑仓位{{ else }}创建仓位{{ end }}</h2>
+                <p>{{ if .isEdit }}修改仓位信息{{ else }}为仓库添加新的仓位信息{{ end }}</p>
+            </div>
+            <a class="btn btn-outline" href="/warehouses/detail/{{ .warehouse.ID }}">返回详情</a>
+        </div>
+
+        <div class="card form-card">
+            {{ if .error }}
+            <div class="login-alert">{{ .error }}</div>
+            {{ end }}
+
+            <div class="card-title">仓位信息</div>
+            <form method="post" action="{{ .action }}" class="admin-form">
+                <div class="form-item">
+                    <label for="warehouseName">所属仓库</label>
+                    <input type="text" id="warehouseName" value="{{ .warehouse.Name }}" disabled>
+                </div>
+                <div class="form-item">
+                    <label for="name">仓位名称 <em>*</em></label>
+                    <input type="text" id="name" name="name" value="{{ .location.Name }}" required maxlength="100" placeholder="请输入仓位名称">
+                </div>
+                <div class="form-item">
+                    <label for="code">仓位编码</label>
+                    <input type="text" id="code" name="code" value="{{ .location.Code }}" maxlength="50" placeholder="请输入仓位编码（可选）">
+                </div>
+                <div class="form-item">
+                    <label>状态</label>
+                    <label class="form-checkbox-line">
+                        <input type="checkbox" name="status" value="1" {{ if eq .location.Status 1 }}checked{{ end }}>
+                        <span>启用</span>
+                    </label>
+                </div>
+                <div class="form-item">
+                    <label for="remark">备注</label>
+                    <textarea id="remark" name="remark" maxlength="200" placeholder="请输入备注信息">{{ .location.Remark }}</textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存仓位</button>
+                    <button type="reset" class="btn btn-outline">重 置</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

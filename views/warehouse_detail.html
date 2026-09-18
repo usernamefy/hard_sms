@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="javascript:void(0)">商品入库</a>
+            <a class="menu-item active" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="javascript:void(0)">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>仓库详情</h2>
+                <p>查看仓库完整信息和仓位</p>
+            </div>
+            <a class="btn btn-outline" href="/warehouses">返回列表</a>
+        </div>
+
+        <div class="card">
+            <div class="card-title">基本信息</div>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">仓库名称</div>
+                    <div class="detail-value">{{ .warehouse.Name }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">仓库编码</div>
+                    <div class="detail-value">{{ if .warehouse.Code }}{{ .warehouse.Code }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">仓库地址</div>
+                    <div class="detail-value">{{ if .warehouse.Address }}{{ .warehouse.Address }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">管理员</div>
+                    <div class="detail-value">{{ .warehouse.Manager.DisplayName }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">状态</div>
+                    <div class="detail-value">
+                        {{ if eq .warehouse.Status 1 }}
+                        <span class="tag tag-success">启用</span>
+                        {{ else }}
+                        <span class="tag tag-danger">禁用</span>
+                        {{ end }}
+                    </div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">仓位数量</div>
+                    <div class="detail-value">{{ len .locations }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">备注</div>
+                    <div class="detail-value">{{ if .warehouse.Remark }}{{ .warehouse.Remark }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">创建时间</div>
+                    <div class="detail-value">{{ fmtTime .warehouse.CreatedAt }}</div>
+                </div>
+            </div>
+
+            <div class="detail-actions">
+                <a class="btn btn-primary" href="/warehouses/edit/{{ .warehouse.ID }}">编辑仓库</a>
+            </div>
+        </div>
+
+        <div class="card card-gap-top">
+            <div class="card-head">
+                <div class="card-title">仓位列表</div>
+                <a class="btn btn-primary btn-sm" href="/warehouses/detail/{{ .warehouse.ID }}/locations/add">+ 新增仓位</a>
+            </div>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>仓位名称</th>
+                    <th>仓位编码</th>
+                    <th>当前库存</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{ range .locations }}
+                <tr>
+                    <td>{{ .Name }}</td>
+                    <td>{{ if .Code }}{{ .Code }}{{ else }}-{{ end }}</td>
+                    <td>{{ .CurrentStock }}</td>
+                    <td>
+                        {{ if eq .Status 1 }}
+                        <span class="tag tag-success">启用</span>
+                        {{ else }}
+                        <span class="tag tag-danger">禁用</span>
+                        {{ end }}
+                    </td>
+                    <td>
+                        <a class="btn btn-ghost btn-sm" href="/warehouses/detail/{{ $.warehouse.ID }}/locations/edit/{{ .ID }}">编辑</a>
+                        <form class="inline-form" method="post"
+                              action="/warehouses/detail/{{ $.warehouse.ID }}/locations/delete/{{ .ID }}"
+                              onsubmit="return confirm('确定删除仓位「{{ .Name }}」吗？')">
+                            <button type="submit" class="btn btn-danger btn-sm">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {{ else }}
+                <tr>
+                    <td colspan="5" class="empty-tip">暂无仓位，点击右上角「新增仓位」创建</td>
+                </tr>
+                {{ end }}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="javascript:void(0)">商品入库</a>
+            <a class="menu-item active" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="javascript:void(0)">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head">
+            <h2>仓库列表</h2>
+            <p>管理和查看所有仓库信息</p>
+        </div>
+
+        <div class="toolbar">
+            <div></div>
+            <a class="btn btn-primary" href="/warehouses/add">+ 新增仓库</a>
+        </div>
+
+        <div class="card">
+            <div class="card-title">仓库列表</div>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>仓库名称</th>
+                    <th>仓库编码</th>
+                    <th>地址</th>
+                    <th>管理员</th>
+                    <th>仓位数量</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{ range .warehouses }}
+                <tr>
+                    <td><a class="table-link" href="/warehouses/detail/{{ .ID }}">{{ .Name }}</a></td>
+                    <td>{{ if .Code }}{{ .Code }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .Address }}{{ .Address }}{{ else }}-{{ end }}</td>
+                    <td>{{ .Manager.DisplayName }}</td>
+                    <td>{{ .LocationCount }}</td>
+                    <td>
+                        {{ if eq .Status 1 }}
+                        <span class="tag tag-success">启用</span>
+                        {{ else }}
+                        <span class="tag tag-danger">禁用</span>
+                        {{ end }}
+                    </td>
+                    <td>
+                        <a class="btn btn-ghost btn-sm" href="/warehouses/detail/{{ .ID }}">详情</a>
+                        <a class="btn btn-outline btn-sm" href="/warehouses/edit/{{ .ID }}">编辑</a>
+                    </td>
+                </tr>
+                {{ else }}
+                <tr>
+                    <td colspan="7" class="empty-tip">暂无仓库，点击右上角「新增仓库」创建</td>
+                </tr>
+                {{ end }}
+                </tbody>
+            </table>
+
+            {{ if gt .totalPages 1 }}
+            <div class="pager">
+                {{ if gt .page 1 }}
+                <a class="btn btn-outline btn-sm" href="/warehouses?page={{ dec .page }}">上一页</a>
+                {{ end }}
+                <span class="pager-info">第 {{ .page }} / {{ .totalPages }} 页，共 {{ .total }} 条</span>
+                {{ if lt .page .totalPages }}
+                <a class="btn btn-outline btn-sm" href="/warehouses?page={{ inc .page }}">下一页</a>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="pager"><span class="pager-info">共 {{ .total }} 条</span></div>
+            {{ end }}
+        </div>
+    </main>
+</div>
+</body>
+</html>
