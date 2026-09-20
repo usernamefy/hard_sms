@@ -82,15 +82,19 @@
             <div class="detail-grid">
                 <div class="detail-item">
                     <div class="detail-label">当前库存</div>
-                    <div class="detail-value">{{ if eq .product.Status 1 }}1{{ else }}0{{ end }}</div>
+                    <div class="detail-value">{{ if eq .product.Status 1 }}{{ .product.Quantity }}{{ else }}0{{ end }}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">在库数量</div>
-                    <div class="detail-value">{{ if eq .product.Status 1 }}1{{ else }}0{{ end }}</div>
+                    <div class="detail-value">{{ if eq .product.Status 1 }}{{ .product.Quantity }}{{ else }}0{{ end }}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">已借出数量</div>
                     <div class="detail-value">{{ if eq .product.Status 2 }}1{{ else }}0{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">入库数量</div>
+                    <div class="detail-value">{{ .product.Quantity }}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">所在仓库</div>

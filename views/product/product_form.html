@@ -109,6 +109,10 @@
                         </select>
                     </div>
                     <div class="form-item">
+                        <label for="quantity">入库数量 <em>*</em></label>
+                        <input type="number" id="quantity" name="quantity" value="{{ .product.Quantity }}" min="1" step="1" required placeholder="请输入入库数量">
+                    </div>
+                    <div class="form-item">
                         <label for="inboundDate">入库日期</label>
                         <input type="date" id="inboundDate" value="{{ .inboundDate }}" readonly>
                     </div>

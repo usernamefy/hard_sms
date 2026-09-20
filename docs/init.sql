@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS `tbl_products` (
   `warehouse_id` INT UNSIGNED NOT NULL COMMENT '所在仓库',
   `location_id`  INT UNSIGNED DEFAULT NULL COMMENT '所在仓位',
   `inbound_date` DATE         NOT NULL COMMENT '入库日期（系统自动）',
+  `quantity`     INT          NOT NULL DEFAULT 1 COMMENT '入库数量',
   `status`       INT          NOT NULL COMMENT '1 在库 / 2 已借出 / 0 已出库',
   `image`        VARCHAR(255) DEFAULT NULL COMMENT '商品图片路径',
   `remark`       VARCHAR(500) DEFAULT NULL,

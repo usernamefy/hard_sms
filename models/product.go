@@ -44,7 +44,8 @@ type Product struct {
 	WarehouseID uint      `gorm:"not null;index" json:"warehouseId"`               // 所在仓库
 	LocationID  *uint     `gorm:"index" json:"locationId"`                         // 所在仓位，可空
 	InboundDate time.Time `gorm:"type:date;not null" json:"inboundDate"`           // 入库日期（系统自动）
-	Status      int       `json:"status"`                                          // 1 在库 / 2 已借出 / 0 已出库
+	Quantity    int       `gorm:"not null" json:"quantity"`                      // 入库数量
+	Status      int       `json:"status"`                                        // 1 在库 / 2 已借出 / 0 已出库
 	Image       string    `gorm:"type:varchar(255)" json:"image"`                  // 商品图片相对路径
 	Remark      string    `gorm:"type:varchar(500)" json:"remark"`
 	CreatedBy   *uint     `json:"createdBy"` // 创建人（tbl_users.id）

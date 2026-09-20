@@ -41,6 +41,7 @@ type productForm struct {
 	OwnerName   string `form:"ownerName"`
 	WarehouseID uint   `form:"warehouseId" binding:"required"`
 	LocationID  uint   `form:"locationId"`
+	Quantity    int    `form:"quantity" binding:"required"`
 	Remark      string `form:"remark"`
 }
 
@@ -91,7 +92,7 @@ func (c *ProductController) Add(ctx *gin.Context) {
 		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "生成 SN 码失败"})
 		return
 	}
-	product := &models.Product{SN: sn, Status: models.ProductStatusInStock}
+	product := &models.Product{SN: sn, Status: models.ProductStatusInStock, Quantity: 1}
 	c.renderForm(ctx, "/products/add", product, false, "")
 }
 
@@ -103,12 +104,16 @@ func (c *ProductController) DoAdd(ctx *gin.Context) {
 		c.renderForm(ctx, "/products/add", productFromForm(&form), false, msg)
 	}
 	if err := ctx.ShouldBind(&form); err != nil {
-		fail("请填写商品名称、SN 码、一级分类和仓库等必填项")
+		fail("请填写商品名称、SN 码、一级分类、仓库和入库数量等必填项")
 		return
 	}
 	form.SN = strings.TrimSpace(form.SN)
 	if !snPattern.MatchString(form.SN) {
 		fail("SN 码格式不正确，请点击「生成 SN 码」重新生成")
+		return
+	}
+	if form.Quantity < 1 {
+		fail("入库数量至少为 1")
 		return
 	}
 	if !models.IsValidProductCategory(form.Category) {
@@ -196,7 +201,11 @@ func (c *ProductController) DoEdit(ctx *gin.Context) {
 		c.renderForm(ctx, "/products/edit/"+ctx.Param("id"), draft, true, msg)
 	}
 	if err := ctx.ShouldBind(&form); err != nil {
-		fail("请填写商品名称、一级分类和仓库等必填项")
+		fail("请填写商品名称、一级分类、仓库和入库数量等必填项")
+		return
+	}
+	if form.Quantity < 1 {
+		fail("入库数量至少为 1")
 		return
 	}
 	if !models.IsValidProductCategory(form.Category) {
@@ -238,6 +247,7 @@ func (c *ProductController) DoEdit(ctx *gin.Context) {
 		"owner_name":   form.OwnerName,
 		"warehouse_id": form.WarehouseID,
 		"location_id":  locationID,
+		"quantity":     form.Quantity,
 		"remark":       form.Remark,
 	}
 	if err := models.UpdateProduct(product, fields); err != nil {
@@ -350,6 +360,7 @@ func productFromForm(form *productForm) *models.Product {
 		SubCategory: form.SubCategory,
 		OwnerName:   form.OwnerName,
 		WarehouseID: form.WarehouseID,
+		Quantity:    form.Quantity,
 		Remark:      form.Remark,
 	}
 	if form.LocationID > 0 {
