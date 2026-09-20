@@ -65,3 +65,32 @@ CREATE TABLE IF NOT EXISTS `tbl_locations` (
   KEY `idx_tbl_locations_warehouse_id` (`warehouse_id`),
   KEY `idx_tbl_locations_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='仓位表';
+
+-- 5. 商品表（一台实物一条记录，SN 码全局唯一）
+CREATE TABLE IF NOT EXISTS `tbl_products` (
+  `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`         VARCHAR(100) NOT NULL COMMENT '商品名称',
+  `sn`           VARCHAR(50)  NOT NULL COMMENT 'SN 码（自动生成，全局唯一）',
+  `sku`          VARCHAR(50)  DEFAULT NULL,
+  `spu`          VARCHAR(50)  DEFAULT NULL,
+  `category`     VARCHAR(50)  NOT NULL COMMENT '一级分类',
+  `sub_category` VARCHAR(100) DEFAULT NULL COMMENT '二级分类（文本）',
+  `price`        DECIMAL(10,2) DEFAULT NULL COMMENT '价格（元）',
+  `owner_name`   VARCHAR(50)  DEFAULT NULL COMMENT '样品归属人',
+  `warehouse_id` INT UNSIGNED NOT NULL COMMENT '所在仓库',
+  `location_id`  INT UNSIGNED DEFAULT NULL COMMENT '所在仓位',
+  `inbound_date` DATE         NOT NULL COMMENT '入库日期（系统自动）',
+  `status`       INT          NOT NULL COMMENT '1 在库 / 2 已借出 / 0 已出库',
+  `image`        VARCHAR(255) DEFAULT NULL COMMENT '商品图片路径',
+  `remark`       VARCHAR(500) DEFAULT NULL,
+  `created_by`   INT UNSIGNED DEFAULT NULL COMMENT '创建人',
+  `created_at`   DATETIME     DEFAULT NULL,
+  `updated_at`   DATETIME     DEFAULT NULL,
+  `deleted_at`   DATETIME     DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tbl_products_sn` (`sn`),
+  KEY `idx_tbl_products_warehouse` (`warehouse_id`),
+  KEY `idx_tbl_products_category` (`category`),
+  KEY `idx_tbl_products_inbound_date` (`inbound_date`),
+  KEY `idx_tbl_products_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表（一台实物一条记录）';

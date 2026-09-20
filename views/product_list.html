@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item active" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="javascript:void(0)">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head">
+            <h2>商品列表</h2>
+            <p>管理和查看所有商品信息</p>
+        </div>
+
+        <div class="toolbar">
+            <form class="search-form" method="get" action="/products">
+                <input type="text" name="keyword" value="{{ .keyword }}" placeholder="商品名称 / SN / SKU / SPU">
+                <select name="category">
+                    <option value="">全部分类</option>
+                    {{ range .categories }}
+                    <option value="{{ . }}" {{ if eq . $.category }}selected{{ end }}>{{ . }}</option>
+                    {{ end }}
+                </select>
+                <button type="submit" class="btn btn-ghost">搜索</button>
+            </form>
+            <div class="toolbar-actions">
+                <a class="btn btn-primary" href="/products/add">商品入库</a>
+                <a class="btn btn-outline" href="/">返回首页</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>商品名称</th>
+                    <th>SKU</th>
+                    <th>SPU</th>
+                    <th>SN 码</th>
+                    <th>分类</th>
+                    <th>价格</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{ range .products }}
+                <tr>
+                    <td><a class="table-link" href="/products/{{ .ID }}">{{ .Name }}</a></td>
+                    <td>{{ if .SKU }}{{ .SKU }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .SPU }}{{ .SPU }}{{ else }}-{{ end }}</td>
+                    <td><a class="table-link" href="/products/{{ .ID }}">{{ .SN }}</a></td>
+                    <td>{{ .Category }}{{ if .SubCategory }} / {{ .SubCategory }}{{ end }}</td>
+                    <td>{{ money .Price }}</td>
+                    <td>
+                        <a class="btn btn-ghost btn-sm" href="/products/{{ .ID }}">详情</a>
+                        <a class="btn btn-outline btn-sm" href="/products/edit/{{ .ID }}">编辑</a>
+                    </td>
+                </tr>
+                {{ else }}
+                <tr>
+                    <td colspan="7" class="empty-tip">暂无商品，点击右上角「商品入库」登记</td>
+                </tr>
+                {{ end }}
+                </tbody>
+            </table>
+
+            {{ if gt .totalPages 1 }}
+            <div class="pager">
+                {{ if gt .page 1 }}
+                <a class="btn btn-outline btn-sm" href="/products?page={{ dec .page }}&keyword={{ .keyword }}&category={{ .category }}">上一页</a>
+                {{ end }}
+                <span class="pager-info">第 {{ .page }} / {{ .totalPages }} 页，共 {{ .total }} 条</span>
+                {{ if lt .page .totalPages }}
+                <a class="btn btn-outline btn-sm" href="/products?page={{ inc .page }}&keyword={{ .keyword }}&category={{ .category }}">下一页</a>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="pager"><span class="pager-info">共 {{ .total }} 条</span></div>
+            {{ end }}
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -44,6 +44,13 @@ func CountLocationsByWarehouse(warehouseID uint) (int64, error) {
 	return total, err
 }
 
+// ListEnabledLocations 查询全部启用状态的仓位（供商品表单二级联动）
+func ListEnabledLocations() ([]Location, error) {
+	var locations []Location
+	err := DB.Where("status = ?", 1).Order("id ASC").Find(&locations).Error
+	return locations, err
+}
+
 // CreateLocation 创建仓位
 func CreateLocation(location *Location) error {
 	return DB.Create(location).Error

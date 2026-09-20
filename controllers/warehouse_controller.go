@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -46,7 +45,6 @@ func (c *WarehouseController) List(ctx *gin.Context) {
 	}
 	pageSize := 10
 	warehouses, total, err := models.ListWarehouses(page, pageSize)
-	fmt.Println("total=%d, len=%d, warehouses=%+v", total, len(warehouses), warehouses)
 	if err != nil {
 		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "查询仓库列表失败"})
 		return

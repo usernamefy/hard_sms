@@ -2,6 +2,8 @@ package routes
 
 import (
 	"html/template"
+	"strconv"
+	"strings"
 	"time"
 
 	"sms/config"
@@ -21,12 +23,31 @@ func fmtTime(t *time.Time) string {
 	return t.Format("2006-01-02 15:04:05")
 }
 
+// money 金额展示：￥ + 千分位 + 两位小数（未填写显示 -）
+func money(v *float64) string {
+	if v == nil {
+		return "-"
+	}
+	s := strconv.FormatFloat(*v, 'f', 2, 64)
+	dot := strings.IndexByte(s, '.')
+	intPart, frac := s[:dot], s[dot:]
+	var buf []byte
+	for i := 0; i < len(intPart); i++ {
+		if i > 0 && (len(intPart)-i)%3 == 0 {
+			buf = append(buf, ',')
+		}
+		buf = append(buf, intPart[i])
+	}
+	return "￥" + string(buf) + frac
+}
+
 // Setup 创建并注册所有路由
 func Setup() *gin.Engine {
 	router := gin.Default()
 
 	router.SetFuncMap(template.FuncMap{
 		"fmtTime": fmtTime,
+		"money":   money,
 		"inc":     func(i int) int { return i + 1 },
 		"dec":     func(i int) int { return i - 1 },
 	})
@@ -76,6 +97,15 @@ func Setup() *gin.Engine {
 		admin.GET("/warehouses/detail/:id/locations/edit/:locId", controllers.WarehouseCtl.LocationEdit)
 		admin.POST("/warehouses/detail/:id/locations/edit/:locId", controllers.WarehouseCtl.LocationDoEdit)
 		admin.POST("/warehouses/detail/:id/locations/delete/:locId", controllers.WarehouseCtl.LocationDelete)
+
+		// 商品入库
+		admin.GET("/products", controllers.ProductCtl.List)
+		admin.GET("/products/add", controllers.ProductCtl.Add)
+		admin.POST("/products/add", controllers.ProductCtl.DoAdd)
+		admin.GET("/products/api/sn", controllers.ProductCtl.GenerateSN)
+		admin.GET("/products/edit/:id", controllers.ProductCtl.Edit)
+		admin.POST("/products/edit/:id", controllers.ProductCtl.DoEdit)
+		admin.GET("/products/:id", controllers.ProductCtl.Detail)
 
 		admin.GET("/logout", controllers.UserCtl.Logout)
 	}

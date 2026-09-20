@@ -556,3 +556,71 @@ a {
     gap: 12px;
     margin-top: 28px;
 }
+
+/* ========== 商品入库 ========== */
+.toolbar-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.search-form select {
+    height: 36px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 13px;
+    outline: none;
+    background: #fff;
+}
+
+.search-form select:focus {
+    border-color: #6366f1;
+}
+
+.sn-field {
+    display: flex;
+    gap: 8px;
+}
+
+.sn-field input {
+    flex: 1;
+}
+
+.form-section-gap {
+    margin-top: 20px;
+}
+
+.form-hint {
+    margin-top: 6px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.form-image-preview {
+    display: block;
+    margin-top: 10px;
+    max-width: 160px;
+    max-height: 160px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.admin-form .form-item input[readonly] {
+    background: #f8fafc;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.admin-form .form-item input[type="file"] {
+    height: auto;
+    padding: 8px 10px;
+    background: #fff;
+}
+
+.detail-image {
+    display: block;
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}

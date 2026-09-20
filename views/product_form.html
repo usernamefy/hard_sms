@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item active" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="javascript:void(0)">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>{{ if .isEdit }}编辑商品{{ else }}创建商品（入库登记）{{ end }}</h2>
+                <p>{{ if .isEdit }}修改商品信息，SN 码与入库事实不可变更{{ else }}录入商品信息并完成入库登记{{ end }}</p>
+            </div>
+            <a class="btn btn-outline" href="/products">返回列表</a>
+        </div>
+
+        <div class="card form-card form-card-wide">
+            {{ if .error }}
+            <div class="login-alert">{{ .error }}</div>
+            {{ end }}
+
+            <form method="post" action="{{ .action }}" enctype="multipart/form-data" class="admin-form">
+                <div class="card-title">商品信息</div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="name">商品名称 <em>*</em></label>
+                        <input type="text" id="name" name="name" value="{{ .product.Name }}" required maxlength="100" placeholder="请输入商品名称">
+                    </div>
+                    <div class="form-item">
+                        <label for="sn">SN 码 <em>*</em></label>
+                        <div class="sn-field">
+                            <input type="text" id="sn" name="sn" value="{{ .product.SN }}" readonly required>
+                            {{ if not .isEdit }}
+                            <button type="button" class="btn btn-outline" id="btnGenSN">生成 SN 码</button>
+                            {{ end }}
+                        </div>
+                    </div>
+                    <div class="form-item">
+                        <label for="sku">SKU</label>
+                        <input type="text" id="sku" name="sku" value="{{ .product.SKU }}" maxlength="50" placeholder="请输入 SKU（可选）">
+                    </div>
+                    <div class="form-item">
+                        <label for="spu">SPU</label>
+                        <input type="text" id="spu" name="spu" value="{{ .product.SPU }}" maxlength="50" placeholder="请输入 SPU（可选）">
+                    </div>
+                    <div class="form-item">
+                        <label for="price">价格（元）</label>
+                        <input type="number" id="price" name="price" value="{{ .product.PriceText }}" min="0" step="0.01" placeholder="请输入价格（可选）">
+                    </div>
+                    <div class="form-item">
+                        <label for="category">一级分类 <em>*</em></label>
+                        <select id="category" name="category" required>
+                            <option value="">请选择一级分类</option>
+                            {{ range .categories }}
+                            <option value="{{ . }}" {{ if eq . $.product.Category }}selected{{ end }}>{{ . }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="subCategory">二级分类</label>
+                        <input type="text" id="subCategory" name="subCategory" value="{{ .product.SubCategory }}" maxlength="100" placeholder="请输入二级分类（可选）">
+                    </div>
+                    <div class="form-item">
+                        <label for="ownerName">样品归属人</label>
+                        <select id="ownerName" name="ownerName">
+                            <option value="">请选择样品归属人</option>
+                            {{ range .ownerNames }}
+                            <option value="{{ . }}" {{ if eq . $.product.OwnerName }}selected{{ end }}>{{ . }}</option>
+                            {{ end }}
+                            {{ if .ownerExtra }}
+                            <option value="{{ .ownerExtra }}" selected>{{ .ownerExtra }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card-title form-section-gap">入库信息</div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="warehouseId">仓库 <em>*</em></label>
+                        <select id="warehouseId" name="warehouseId" required>
+                            <option value="">请选择仓库</option>
+                            {{ range .warehouses }}
+                            <option value="{{ .ID }}" {{ if eq .ID $.product.WarehouseID }}selected{{ end }}>{{ .Name }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="locationId">仓位</label>
+                        <select id="locationId" name="locationId">
+                            <option value="">请选择仓位</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="inboundDate">入库日期</label>
+                        <input type="date" id="inboundDate" value="{{ .inboundDate }}" readonly>
+                    </div>
+                    <div class="form-item">
+                        <label for="ageDays">库龄（天）</label>
+                        <input type="text" id="ageDays" value="{{ .ageDays }}" readonly>
+                    </div>
+                    <div class="form-item form-item--full">
+                        <label for="image">商品图片</label>
+                        <input type="file" id="image" name="image" accept=".jpg,.jpeg,.png">
+                        <p class="form-hint">支持 jpg / png 格式，大小不超过 5MB{{ if and .isEdit .product.Image }}，重新选择将替换旧图{{ end }}</p>
+                        {{ if and .isEdit .product.Image }}
+                        <img class="form-image-preview" src="/static/{{ .product.Image }}" alt="商品图片">
+                        {{ end }}
+                    </div>
+                    <div class="form-item form-item--full">
+                        <label for="remark">备注</label>
+                        <textarea id="remark" name="remark" maxlength="500" placeholder="请输入备注信息">{{ .product.Remark }}</textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">{{ if .isEdit }}保 存{{ else }}确认入库{{ end }}</button>
+                    <button type="reset" class="btn btn-outline">重 置</button>
+                </div>
+            </form>
+        </div>
+
+        <script>
+        (function () {
+            var locations = {{ .locationsByWarehouse }};
+            var whSel = document.getElementById('warehouseId');
+            var locSel = document.getElementById('locationId');
+            var currentLoc = '{{ .selectedLocationID }}';
+
+            function fillLocations() {
+                var options = locations[String(whSel.value)] || [];
+                locSel.innerHTML = '';
+                var placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = '请选择仓位';
+                locSel.appendChild(placeholder);
+                options.forEach(function (item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.name;
+                    if (String(item.id) === currentLoc) {
+                        opt.selected = true;
+                    }
+                    locSel.appendChild(opt);
+                });
+            }
+
+            whSel.addEventListener('change', function () {
+                currentLoc = '';
+                fillLocations();
+            });
+            fillLocations();
+
+            var btnGenSN = document.getElementById('btnGenSN');
+            if (btnGenSN) {
+                btnGenSN.addEventListener('click', function () {
+                    fetch('/products/api/sn')
+                        .then(function (res) { return res.json(); })
+                        .then(function (data) {
+                            if (data.sn) {
+                                document.getElementById('sn').value = data.sn;
+                            }
+                        });
+                });
+            }
+        })();
+        </script>
+    </main>
+</div>
+</body>
+</html>

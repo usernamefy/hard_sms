@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item active" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="javascript:void(0)">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>商品详情</h2>
+                <p>查看商品基本信息、库存信息和其他信息</p>
+            </div>
+            <a class="btn btn-outline" href="/products">返回列表</a>
+        </div>
+
+        <div class="card">
+            <div class="card-title">基本信息</div>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">商品名称</div>
+                    <div class="detail-value">{{ .product.Name }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">SPU</div>
+                    <div class="detail-value">{{ if .product.SPU }}{{ .product.SPU }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">SKU</div>
+                    <div class="detail-value">{{ if .product.SKU }}{{ .product.SKU }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">SN 码</div>
+                    <div class="detail-value">{{ .product.SN }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">分类</div>
+                    <div class="detail-value">{{ .product.Category }}{{ if .product.SubCategory }} / {{ .product.SubCategory }}{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">价格</div>
+                    <div class="detail-value">{{ money .product.Price }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">样品归属人</div>
+                    <div class="detail-value">{{ if .product.OwnerName }}{{ .product.OwnerName }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">商品图片</div>
+                    <div class="detail-value">
+                        {{ if .product.Image }}
+                        <img class="detail-image" src="/static/{{ .product.Image }}" alt="商品图片">
+                        {{ else }}-{{ end }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-actions">
+                <a class="btn btn-primary" href="/products/edit/{{ .product.ID }}">编辑商品</a>
+            </div>
+        </div>
+
+        <div class="card card-gap-top">
+            <div class="card-title">库存信息</div>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">当前库存</div>
+                    <div class="detail-value">{{ if eq .product.Status 1 }}1{{ else }}0{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">在库数量</div>
+                    <div class="detail-value">{{ if eq .product.Status 1 }}1{{ else }}0{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">已借出数量</div>
+                    <div class="detail-value">{{ if eq .product.Status 2 }}1{{ else }}0{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">所在仓库</div>
+                    <div class="detail-value">{{ if .product.WarehouseName }}{{ .product.WarehouseName }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">所在仓位</div>
+                    <div class="detail-value">{{ if .product.LocationName }}{{ .product.LocationName }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">入库日期</div>
+                    <div class="detail-value">{{ .product.InboundDate.Format "2006-01-02" }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">库龄（天）</div>
+                    <div class="detail-value">{{ .product.AgeDays }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-gap-top">
+            <div class="card-title">其他信息</div>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">创建时间</div>
+                    <div class="detail-value">{{ fmtTime .product.CreatedAt }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">更新时间</div>
+                    <div class="detail-value">{{ fmtTime .product.UpdatedAt }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">创建人</div>
+                    <div class="detail-value">{{ if .product.CreatedByName }}{{ .product.CreatedByName }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">备注</div>
+                    <div class="detail-value">{{ if .product.Remark }}{{ .product.Remark }}{{ else }}-{{ end }}</div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

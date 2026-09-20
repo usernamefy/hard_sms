@@ -79,6 +79,13 @@ func ListWarehouses(page, pageSize int) ([]Warehouse, int64, error) {
 	return warehouses, total, nil
 }
 
+// ListEnabledWarehouses 查询全部启用状态的仓库（供商品表单下拉选择）
+func ListEnabledWarehouses() ([]Warehouse, error) {
+	var warehouses []Warehouse
+	err := DB.Where("status = ?", 1).Order("id ASC").Find(&warehouses).Error
+	return warehouses, err
+}
+
 // CreateWarehouse 创建仓库
 func CreateWarehouse(warehouse *Warehouse) error {
 	return DB.Create(warehouse).Error

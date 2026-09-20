@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"sms/config"
 	"sms/models"
@@ -32,5 +33,14 @@ func Init() {
 	}
 
 	models.SetDB(db)
+
+	// 配置连接池：定期更换连接，避免 MySQL 侧断开后拿到失效连接
+	if sqlDB, err := db.DB(); err == nil {
+		sqlDB.SetMaxOpenConns(20)
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetConnMaxIdleTime(2 * time.Minute)
+		sqlDB.SetConnMaxLifetime(time.Hour)
+	}
+
 	log.Printf("MySQL 连接成功: %s:%d/%s", config.App.DBHost, config.App.DBPort, config.App.DBName)
 }
