@@ -55,8 +55,9 @@ func Setup() *gin.Engine {
 	// 静态资源
 	router.Static("/static", "./static")
 
-	// HTML 模板
-	router.LoadHTMLGlob("views/*")
+	// HTML 模板：views 按模块分子目录（auth/common/home/product/user/warehouse），
+	// 模板名仍是文件名（各目录内不重名），ctx.HTML 用法不变
+	router.LoadHTMLGlob("views/*/*.html")
 
 	// 基于 Cookie 的会话存储
 	store := cookie.NewStore([]byte(config.App.SessionKey))
