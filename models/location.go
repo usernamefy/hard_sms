@@ -14,7 +14,7 @@ type Location struct {
 	Code         string `gorm:"type:varchar(50)" json:"code"`           // 仓位编码
 	CurrentStock int    `gorm:"default:0" json:"currentStock"`          // 当前库存
 	Remark       string `gorm:"type:varchar(200)" json:"remark"`        // 备注
-	Status       int    `gorm:"default:1" json:"status"`                // 状态：1 启用 0 禁用
+	Status       int    `json:"status"`                                 // 状态：1 启用 0 禁用（不设 gorm 默认值，避免 Create 时零值被省略）
 
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`

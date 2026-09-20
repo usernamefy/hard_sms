@@ -21,7 +21,7 @@ type User struct {
 	Password  string         `gorm:"type:varchar(32);not null" json:"-"`                    // 密码（MD5 加密存储）
 	RealName  string         `gorm:"type:varchar(50)" json:"realName"`                      // 真实姓名
 	Role      string         `gorm:"type:varchar(20);default:admin" json:"role"`            // 角色
-	Status    int            `gorm:"default:1" json:"status"`                               // 状态：1 启用 0 禁用
+	Status    int            `json:"status"`                                                // 状态：1 启用 0 禁用（不设 gorm 默认值，避免 Create 时零值被省略）
 	LastLogin *time.Time     `json:"lastLogin"`                                             // 最后登录时间
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`

@@ -14,7 +14,7 @@ type Warehouse struct {
 	Address   string `gorm:"type:varchar(200)" json:"address"`       // 仓库地址
 	ManagerID uint   `json:"managerId"`                              // 管理员 ID，0 表示未指定
 	Remark    string `gorm:"type:varchar(200)" json:"remark"`        // 备注
-	Status    int    `gorm:"default:1" json:"status"`                // 状态：1 启用 0 禁用
+	Status    int    `json:"status"`                                 // 状态：1 启用 0 禁用（不设 gorm 默认值，避免 Create 时零值被省略）
 
 	Manager       *User `gorm:"foreignKey:ManagerID" json:"-"` // 关联的管理员
 	LocationCount int64 `gorm:"-" json:"locationCount"`        // 仓位数量（查询时填充）
