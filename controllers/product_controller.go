@@ -227,6 +227,7 @@ func (c *ProductController) DoEdit(ctx *gin.Context) {
 	if form.LocationID > 0 {
 		locationID = &form.LocationID
 	}
+	//使用map，不会过滤0值
 	fields := map[string]interface{}{
 		"name":         form.Name,
 		"sku":          form.SKU,
