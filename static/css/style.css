@@ -398,6 +398,10 @@ a {
 }
 
 /* ========== 借用管理 ========== */
+.sn-cell div {
+    margin-bottom: 2px;
+}
+
 .borrow-search {
     display: flex;
     gap: 10px;

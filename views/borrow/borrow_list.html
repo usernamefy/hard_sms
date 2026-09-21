@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20260921-5">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-7">
 </head>
 <body class="admin-body">
 {{ template "topbar" . }}
@@ -50,8 +50,9 @@
                 <tr>
                     <th>借用单号</th>
                     <th>借用人</th>
-                    <th>商品数</th>
+                    <th>商品名称</th>
                     <th>借用数量</th>
+                    <th>条形码（SN）</th>
                     <th>借用时间</th>
                     <th>预计归还时间</th>
                     <th>状态</th>
@@ -63,8 +64,13 @@
                 <tr>
                     <td><a class="table-link" href="/borrows/{{ .ID }}">{{ .BorrowNo }}</a></td>
                     <td>{{ .BorrowerName }}{{ if .Department }}（{{ .Department }}）{{ end }}</td>
-                    <td>{{ .ItemCount }}</td>
+                    <td class="sn-cell">
+                        {{ range .Items }}<div>{{ .ProductName }}</div>{{ end }}
+                    </td>
                     <td>{{ .TotalQuantity }}</td>
+                    <td class="sn-cell">
+                        {{ range .Items }}<div>{{ .ProductSN }}</div>{{ end }}
+                    </td>
                     <td>{{ fmtDateTime .BorrowDate }}</td>
                     <td>{{ fmtDate .ExpectReturnDate }}</td>
                     <td>
@@ -78,16 +84,11 @@
                     </td>
                     <td>
                         <a class="btn btn-ghost btn-sm" href="/borrows/{{ .ID }}">详情</a>
-                        {{ if eq .Status 1 }}
-                        <form class="inline-form" method="post" action="/borrows/return/{{ .ID }}" onsubmit="return confirm('确认将该借用单全部商品归还入库？')">
-                            <button type="submit" class="btn btn-outline btn-sm">归还</button>
-                        </form>
-                        {{ end }}
                     </td>
                 </tr>
                 {{ else }}
                 <tr>
-                    <td colspan="8" class="empty-tip">暂无借用记录，点击右上角「新建借用」登记</td>
+                    <td colspan="9" class="empty-tip">暂无借用记录，点击右上角「新建借用」登记</td>
                 </tr>
                 {{ end }}
                 </tbody>
