@@ -4,60 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-2">
 </head>
-<body class="admin-body">
-    <header class="topbar">
-        <div class="topbar-title">库存管理系统</div>
-        <div class="topbar-actions">
-            <span class="topbar-user">{{ .realname }}（{{ .username }}）</span>
-            <a class="btn btn-ghost" href="/">返回首页</a>
-            <a class="btn btn-outline" href="/logout">退出登录</a>
+<body class="home-body">
+    <header class="home-topbar">
+        <div class="home-topbar-title">库存管理系统</div>
+        <div class="home-topbar-actions">
+            <span class="home-user">
+                <svg class="home-user-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2.5c-3.34 0-10 1.67-10 5v2.5h20v-2.5c0-3.33-6.66-5-10-5z"/>
+                </svg>
+                {{ .realname }}
+            </span>
+            <a class="home-logout-btn" href="/logout">退出</a>
         </div>
     </header>
 
-    <div class="layout">
-        <aside class="sidebar">
-            <nav class="menu">
-                <a class="menu-item active" href="/">主页</a>
-                <a class="menu-item" href="/products">商品入库</a>
-                <a class="menu-item" href="/warehouses">仓库管理</a>
-                <a class="menu-item" href="javascript:void(0)">借用记录</a>
-                <a class="menu-item" href="javascript:void(0)">样品异动</a>
-                <a class="menu-item" href="javascript:void(0)">盘点管理</a>
-                <a class="menu-item" href="/users">用户管理</a>
-                <a class="menu-item" href="javascript:void(0)">操作日志</a>
+    <div class="home-layout">
+        <aside class="home-sidebar">
+            <nav class="home-menu">
+                <a class="home-menu-item active" href="/">主页</a>
+                <a class="home-menu-item" href="/products">商品入库</a>
+                <a class="home-menu-item" href="/warehouses">仓库管理</a>
+                <a class="home-menu-item" href="javascript:void(0)">借用记录</a>
+                <a class="home-menu-item" href="javascript:void(0)">样品异动</a>
+                <a class="home-menu-item" href="javascript:void(0)">盘点管理</a>
+                <a class="home-menu-item" href="/users">用户管理</a>
+                <a class="home-menu-item" href="javascript:void(0)">操作日志</a>
             </nav>
         </aside>
 
-        <main class="main">
-            <div class="page-head">
-                <h2>主页</h2>
-                <p>欢迎使用库存管理系统，{{ .realname }}</p>
+        <main class="home-main">
+            <div class="home-page-head">
+                <h1>主页</h1>
+                <p>欢迎使用库存管理系统</p>
             </div>
 
-            <div class="stat-grid">
-                <div class="stat-card">
-                    <div class="stat-num">0</div>
-                    <div class="stat-label">商品总数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">0</div>
-                    <div class="stat-label">仓库数量</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">0</div>
-                    <div class="stat-label">借用中</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">0</div>
-                    <div class="stat-label">待盘点</div>
+            <div class="home-card">
+                <div class="home-card-head">快捷操作</div>
+                <div class="home-quick-grid">
+                    <a class="home-quick-item" href="javascript:void(0)">
+                        <span class="home-quick-icon">📤</span>
+                        <span class="home-quick-label">借用</span>
+                    </a>
+                    <a class="home-quick-item" href="javascript:void(0)">
+                        <span class="home-quick-icon">📥</span>
+                        <span class="home-quick-label">归还</span>
+                    </a>
+                    <a class="home-quick-item" href="javascript:void(0)">
+                        <span class="home-quick-icon">🔥</span>
+                        <span class="home-quick-label">消耗</span>
+                    </a>
+                    <a class="home-quick-item" href="/products">
+                        <span class="home-quick-icon">🔍</span>
+                        <span class="home-quick-label">库存查询</span>
+                    </a>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-title">系统模块</div>
-                <p class="card-text">商品入库、仓库管理、用户管理等模块已上线，借用记录、样品异动、盘点管理、操作日志等模块将在后续迭代中实现。</p>
+            <div class="home-card">
+                <div class="home-card-head">数据概览</div>
+                <div class="home-stat-grid">
+                    <div class="home-stat-item">
+                        <div class="home-stat-num">0</div>
+                        <div class="home-stat-label">商品总数</div>
+                    </div>
+                    <div class="home-stat-item">
+                        <div class="home-stat-num">0</div>
+                        <div class="home-stat-label">仓库数量</div>
+                    </div>
+                    <div class="home-stat-item">
+                        <div class="home-stat-num">0</div>
+                        <div class="home-stat-label">借用中</div>
+                    </div>
+                    <div class="home-stat-item">
+                        <div class="home-stat-num">0</div>
+                        <div class="home-stat-label">待盘点</div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
