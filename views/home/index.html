@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20260921-8">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-10">
 </head>
 <body class="home-body">
     <header class="home-topbar">
@@ -87,15 +87,26 @@
             <div class="home-card">
                 <div class="home-card-head">最近操作</div>
                 {{ if .recentLogs }}
-                <div class="recent-op-list">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>操作人</th>
+                        <th>操作类型</th>
+                        <th>商品名称</th>
+                        <th>时间</th>
+                    </tr>
+                    </thead>
+                    <tbody>
                     {{ range .recentLogs }}
-                    <div class="recent-op-item">
-                        <span class="recent-op-user">{{ if .UserName }}{{ .UserName }}{{ else }}系统{{ end }}</span>
-                        <span class="recent-op-detail">{{ if .Detail }}{{ .Detail }}{{ else }}{{ .Module }} · {{ .Action }}{{ end }}</span>
-                        <span class="recent-op-time">{{ fmtDateTime .CreatedAt }}</span>
-                    </div>
+                    <tr>
+                        <td>{{ if .UserName }}{{ .UserName }}{{ else }}系统{{ end }}</td>
+                        <td><span class="tag {{ operationLogActionClass .Action }}">{{ .Action }}</span></td>
+                        <td>{{ if .ProductName }}{{ .ProductName }}{{ else }}-{{ end }}</td>
+                        <td>{{ fmtDateTime .CreatedAt }}</td>
+                    </tr>
                     {{ end }}
-                </div>
+                    </tbody>
+                </table>
                 {{ else }}
                 <p class="form-hint">暂无操作记录</p>
                 {{ end }}

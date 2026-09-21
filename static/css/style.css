@@ -537,46 +537,6 @@ a {
     font-style: normal;
 }
 
-/* 主页最近操作 */
-.recent-op-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.recent-op-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
-}
-
-.recent-op-item:last-child {
-    border-bottom: none;
-}
-
-.recent-op-user {
-    font-weight: 600;
-    color: #1f2937;
-    flex-shrink: 0;
-}
-
-.recent-op-detail {
-    flex: 1;
-    min-width: 0;
-    color: #475569;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.recent-op-time {
-    color: #94a3b8;
-    font-size: 13px;
-    flex-shrink: 0;
-}
-
 .pager {
     display: flex;
     align-items: center;

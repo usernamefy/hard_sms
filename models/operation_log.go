@@ -6,13 +6,14 @@ import (
 
 // OperationLog 操作日志表模型（映射 tbl_operation_logs，日志不可改删）
 type OperationLog struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	UserID    uint      `gorm:"index" json:"userId"`          // 操作人（tbl_users.id）
-	UserName  string    `gorm:"type:varchar(50)" json:"userName"` // 操作人展示名（快照）
-	Module    string    `gorm:"type:varchar(20);not null" json:"module"` // 模块
-	Action    string    `gorm:"type:varchar(20);not null" json:"action"` // 操作类型
-	Detail    string    `gorm:"type:varchar(500)" json:"detail"`          // 操作内容
-	CreatedAt time.Time `json:"createdAt"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	UserID      uint      `gorm:"index" json:"userId"`                     // 操作人（tbl_users.id）
+	UserName    string    `gorm:"type:varchar(50)" json:"userName"`        // 操作人展示名（快照）
+	Module      string    `gorm:"type:varchar(20);not null" json:"module"` // 模块
+	Action      string    `gorm:"type:varchar(20);not null" json:"action"` // 操作类型
+	ProductName string    `gorm:"type:varchar(200)" json:"productName"`    // 商品名称（快照，多个以、分隔）
+	Detail      string    `gorm:"type:varchar(500)" json:"detail"`         // 操作内容
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // CreateOperationLog 写入一条操作日志

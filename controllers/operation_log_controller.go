@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ type OperationLogController struct{}
 var OperationLogCtl = &OperationLogController{}
 
 // recordOperation 记录操作日志；失败只写应用日志，不影响主流程
-func recordOperation(ctx *gin.Context, module, action, detail string) {
+func recordOperation(ctx *gin.Context, module, action, detail, productName string) {
 	session := sessions.Default(ctx)
 	uid, _ := session.Get("user_id").(uint)
 	name := ""
@@ -27,14 +28,26 @@ func recordOperation(ctx *gin.Context, module, action, detail string) {
 		name = username
 	}
 	if err := models.CreateOperationLog(&models.OperationLog{
-		UserID:   uid,
-		UserName: name,
-		Module:   module,
-		Action:   action,
-		Detail:   detail,
+		UserID:      uid,
+		UserName:    name,
+		Module:      module,
+		Action:      action,
+		ProductName: productName,
+		Detail:      detail,
 	}); err != nil {
 		log.Printf("记录操作日志失败 module=%s action=%s: %v", module, action, err)
 	}
+}
+
+// productNamesSummary 商品名称汇总（日志快照）：最多取前 3 个，更多时以"等N种商品"结尾
+func productNamesSummary(names []string) string {
+	if len(names) == 0 {
+		return ""
+	}
+	if len(names) <= 3 {
+		return strings.Join(names, "、")
+	}
+	return strings.Join(names[:3], "、") + " 等" + strconv.Itoa(len(names)) + "种商品"
 }
 
 // OperationLogActionClass 操作类型 → 标签样式（模板函数）

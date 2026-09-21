@@ -23,17 +23,17 @@ var ErrBorrowAlreadyReturned = errors.New("该借用单已归还")
 
 // BorrowOrder 借用单主表模型（映射 tbl_borrow_orders）
 type BorrowOrder struct {
-	ID               uint      `gorm:"primaryKey" json:"id"`
-	BorrowNo         string    `gorm:"type:varchar(50);not null;uniqueIndex" json:"borrowNo"` // 借用单号（自动生成）
-	BorrowerID       uint      `gorm:"not null;index" json:"borrowerId"`                      // 借用人（tbl_users.id）
-	BorrowerName     string    `gorm:"type:varchar(50);not null" json:"borrowerName"`         // 借用人展示名（借用时快照）
-	Department       string    `gorm:"type:varchar(50)" json:"department"`                    // 借用人部门，可空
-	BorrowDate       time.Time `gorm:"not null" json:"borrowDate"`                            // 借用时间（系统自动）
-	Days             int       `gorm:"not null" json:"days"`                                  // 借用天数（1~365）
-	ExpectReturnDate time.Time `gorm:"type:date;not null" json:"expectReturnDate"`            // 预计归还时间 = 借用时间 + 天数
-	ActualReturnDate *time.Time `json:"actualReturnDate"`                                     // 实际归还时间
-	Status           int       `json:"status"`                                                // 1 借用中 / 2 已归还 / 0 已取消（预留）
-	Remark           string    `gorm:"type:varchar(500)" json:"remark"`
+	ID               uint       `gorm:"primaryKey" json:"id"`
+	BorrowNo         string     `gorm:"type:varchar(50);not null;uniqueIndex" json:"borrowNo"` // 借用单号（自动生成）
+	BorrowerID       uint       `gorm:"not null;index" json:"borrowerId"`                      // 借用人（tbl_users.id）
+	BorrowerName     string     `gorm:"type:varchar(50);not null" json:"borrowerName"`         // 借用人展示名（借用时快照）
+	Department       string     `gorm:"type:varchar(50)" json:"department"`                    // 借用人部门，可空
+	BorrowDate       time.Time  `gorm:"not null" json:"borrowDate"`                            // 借用时间（系统自动）
+	Days             int        `gorm:"not null" json:"days"`                                  // 借用天数（1~365）
+	ExpectReturnDate time.Time  `gorm:"type:date;not null" json:"expectReturnDate"`            // 预计归还时间 = 借用时间 + 天数
+	ActualReturnDate *time.Time `json:"actualReturnDate"`                                      // 实际归还时间
+	Status           int        `json:"status"`                                                // 1 借用中 / 2 已归还 / 0 已取消（预留）
+	Remark           string     `gorm:"type:varchar(500)" json:"remark"`
 
 	// 展示字段：查询时填充，不落库
 	Items         []BorrowItem `gorm:"-" json:"items"` // 明细（详情页填充）
@@ -58,7 +58,7 @@ type BorrowItem struct {
 	ReturnedQuantity int    `json:"returnedQuantity"`                              // 已归还数量（列有 DEFAULT 0，零值可安全 Create）
 
 	PendingQuantity int    `gorm:"-" json:"pendingQuantity"` // 未归还数量（查询时填充）
-	WarehouseName   string `gorm:"-" json:"warehouseName"`  // 商品当前所在仓库（查询时填充）
+	WarehouseName   string `gorm:"-" json:"warehouseName"`   // 商品当前所在仓库（查询时填充）
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -314,6 +314,19 @@ func GetBorrowByID(id uint) (*BorrowOrder, error) {
 	orders := []BorrowOrder{order}
 	fillBorrowDisplay(DB, orders)
 	return &orders[0], nil
+}
+
+// BorrowProductNames 返回借用单明细的商品名称快照（按明细顺序），供操作日志记录
+func BorrowProductNames(orderID uint) []string {
+	var items []BorrowItem
+	if err := DB.Select("product_name").Where("order_id = ?", orderID).Order("id ASC").Find(&items).Error; err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(items))
+	for _, item := range items {
+		names = append(names, item.ProductName)
+	}
+	return names
 }
 
 // ReturnBorrowOrder 整单归还：事务内将该单所有明细的已归还数量置为借用数量，
