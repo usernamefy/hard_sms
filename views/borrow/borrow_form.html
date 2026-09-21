@@ -43,7 +43,34 @@
             <div id="searchResults" class="product-card-list"></div>
 
             <form method="post" action="{{ .action }}" class="admin-form" id="borrowForm">
-                <div class="card-title">借用信息</div>
+                <div class="card-title">商品清单</div>
+                <table class="data-table borrow-table">
+                    <thead>
+                    <tr>
+                        <th>商品名称</th>
+                        <th>SN 码</th>
+                        <th>所在仓库</th>
+                        <th>可借数量</th>
+                        <th>借用数量 <em class="required-mark">*</em></th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="borrowRows">
+                    {{ range .rows }}
+                    <tr>
+                        <td>{{ .Name }}</td>
+                        <td>{{ .SN }}</td>
+                        <td>{{ if .Warehouse }}{{ .Warehouse }}{{ else }}-{{ end }}</td>
+                        <td>{{ .Available }}</td>
+                        <td><input type="hidden" name="productIds" value="{{ .ProductID }}"><input type="number" name="quantities" class="qty-input" min="1" step="1" value="{{ .Quantity }}" data-avail="{{ .Available }}" required></td>
+                        <td><button type="button" class="btn btn-danger btn-sm row-remove">移除</button></td>
+                    </tr>
+                    {{ end }}
+                    </tbody>
+                </table>
+                <p class="form-hint" id="borrowEmptyTip" {{ if .rows }}hidden{{ end }}>清单为空，请通过上方搜索添加商品</p>
+
+                <div class="card-title form-section-gap">借用信息</div>
                 <div class="form-grid">
                     <div class="form-item">
                         <label for="borrowNo">借用单号 <em>*</em></label>
@@ -74,33 +101,6 @@
                         <input type="text" id="expectReturn" readonly>
                     </div>
                 </div>
-
-                <div class="card-title">商品清单</div>
-                <table class="data-table borrow-table">
-                    <thead>
-                    <tr>
-                        <th>商品名称</th>
-                        <th>SN 码</th>
-                        <th>所在仓库</th>
-                        <th>可借数量</th>
-                        <th>借用数量 <em class="required-mark">*</em></th>
-                        <th>操作</th>
-                    </tr>
-                    </thead>
-                    <tbody id="borrowRows">
-                    {{ range .rows }}
-                    <tr>
-                        <td>{{ .Name }}</td>
-                        <td>{{ .SN }}</td>
-                        <td>{{ if .Warehouse }}{{ .Warehouse }}{{ else }}-{{ end }}</td>
-                        <td>{{ .Available }}</td>
-                        <td><input type="hidden" name="productIds" value="{{ .ProductID }}"><input type="number" name="quantities" class="qty-input" min="1" step="1" value="{{ .Quantity }}" data-avail="{{ .Available }}" required></td>
-                        <td><button type="button" class="btn btn-danger btn-sm row-remove">移除</button></td>
-                    </tr>
-                    {{ end }}
-                    </tbody>
-                </table>
-                <p class="form-hint" id="borrowEmptyTip" {{ if .rows }}hidden{{ end }}>清单为空，请通过上方搜索添加商品</p>
 
                 <div class="form-item form-item--full form-section-gap">
                     <label for="remark">备注</label>
