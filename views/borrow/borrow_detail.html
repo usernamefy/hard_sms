@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-2">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item active" href="/borrows">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>借用详情</h2>
+                <p>借用单 {{ .order.BorrowNo }}</p>
+            </div>
+            <a class="btn btn-outline" href="/borrows">返回列表</a>
+        </div>
+
+        {{ if .error }}
+        <div class="login-alert">{{ .error }}</div>
+        {{ end }}
+
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">借用信息</div>
+                {{ if eq .order.Status 1 }}
+                    {{ if .order.Overdue }}<span class="tag tag-danger">逾期</span>{{ else }}<span class="tag tag-warning">借用中</span>{{ end }}
+                {{ else if eq .order.Status 2 }}
+                    <span class="tag tag-success">已归还</span>
+                {{ else }}
+                    <span class="tag">已取消</span>
+                {{ end }}
+            </div>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">借用单号</div>
+                    <div class="detail-value">{{ .order.BorrowNo }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">借用人</div>
+                    <div class="detail-value">{{ .order.BorrowerName }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">借用人部门</div>
+                    <div class="detail-value">{{ if .order.Department }}{{ .order.Department }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">借用时间</div>
+                    <div class="detail-value">{{ fmtDateTime .order.BorrowDate }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">借用天数</div>
+                    <div class="detail-value">{{ .order.Days }} 天</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">预计归还时间</div>
+                    <div class="detail-value">{{ fmtDate .order.ExpectReturnDate }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">实际归还时间</div>
+                    <div class="detail-value">{{ fmtTime .order.ActualReturnDate }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">备注</div>
+                    <div class="detail-value">{{ if .order.Remark }}{{ .order.Remark }}{{ else }}-{{ end }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-gap-top">
+            <div class="card-head">
+                <div class="card-title">商品明细</div>
+                <span class="pager-info">共 {{ .order.ItemCount }} 种商品，借用 {{ .order.TotalQuantity }} 件</span>
+            </div>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>商品名称</th>
+                    <th>SN 码</th>
+                    <th>所在仓库</th>
+                    <th>借用数量</th>
+                    <th>已归还数量</th>
+                    <th>未归还数量</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{ range .order.Items }}
+                <tr>
+                    <td><a class="table-link" href="/products/{{ .ProductID }}">{{ .ProductName }}</a></td>
+                    <td>{{ .ProductSN }}</td>
+                    <td>{{ if .WarehouseName }}{{ .WarehouseName }}{{ else }}-{{ end }}</td>
+                    <td>{{ .Quantity }}</td>
+                    <td>{{ .ReturnedQuantity }}</td>
+                    <td>{{ .PendingQuantity }}</td>
+                </tr>
+                {{ else }}
+                <tr>
+                    <td colspan="6" class="empty-tip">无商品明细</td>
+                </tr>
+                {{ end }}
+                </tbody>
+            </table>
+
+            {{ if eq .order.Status 1 }}
+            <div class="detail-actions">
+                <form method="post" action="/borrows/return/{{ .order.ID }}" onsubmit="return confirm('确认将该借用单全部商品归还入库？')">
+                    <button type="submit" class="btn btn-primary">整单归还</button>
+                </form>
+            </div>
+            {{ end }}
+        </div>
+    </main>
+</div>
+</body>
+</html>

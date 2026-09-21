@@ -23,6 +23,22 @@ func fmtTime(t *time.Time) string {
 	return t.Format("2006-01-02 15:04:05")
 }
 
+// fmtDateTime 格式化时间值（datetime 列，零值显示 -）
+func fmtDateTime(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.Format("2006-01-02 15:04")
+}
+
+// fmtDate 格式化日期值（date 列，零值显示 -）
+func fmtDate(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.Format("2006-01-02")
+}
+
 // money 金额展示：￥ + 千分位 + 两位小数（未填写显示 -）
 func money(v *float64) string {
 	if v == nil {
@@ -46,10 +62,12 @@ func Setup() *gin.Engine {
 	router := gin.Default()
 
 	router.SetFuncMap(template.FuncMap{
-		"fmtTime": fmtTime,
-		"money":   money,
-		"inc":     func(i int) int { return i + 1 },
-		"dec":     func(i int) int { return i - 1 },
+		"fmtTime":     fmtTime,
+		"fmtDateTime": fmtDateTime,
+		"fmtDate":     fmtDate,
+		"money":       money,
+		"inc":         func(i int) int { return i + 1 },
+		"dec":         func(i int) int { return i - 1 },
 	})
 
 	// 静态资源
@@ -107,6 +125,14 @@ func Setup() *gin.Engine {
 		admin.GET("/products/edit/:id", controllers.ProductCtl.Edit)
 		admin.POST("/products/edit/:id", controllers.ProductCtl.DoEdit)
 		admin.GET("/products/:id", controllers.ProductCtl.Detail)
+
+		// 借用管理
+		admin.GET("/borrows", controllers.BorrowCtl.List)
+		admin.GET("/borrows/add", controllers.BorrowCtl.Add)
+		admin.POST("/borrows/add", controllers.BorrowCtl.DoAdd)
+		admin.GET("/borrows/api/no", controllers.BorrowCtl.GenerateNo)
+		admin.POST("/borrows/return/:id", controllers.BorrowCtl.Return)
+		admin.GET("/borrows/:id", controllers.BorrowCtl.Detail)
 
 		admin.GET("/logout", controllers.UserCtl.Logout)
 	}

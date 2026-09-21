@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-2">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item active" href="/borrows">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>新建借用</h2>
+                <p>选择在库商品并登记借用数量，提交后生成借用单</p>
+            </div>
+            <a class="btn btn-outline" href="/borrows">返回列表</a>
+        </div>
+
+        <div class="card form-card form-card-wide">
+            {{ if .error }}
+            <div class="login-alert">{{ .error }}</div>
+            {{ end }}
+
+            <form method="post" action="{{ .action }}" class="admin-form" id="borrowForm">
+                <div class="card-title">借用信息</div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="borrowNo">借用单号 <em>*</em></label>
+                        <div class="sn-field">
+                            <input type="text" id="borrowNo" value="{{ .borrowNo }}" readonly>
+                            <button type="button" class="btn btn-outline" id="btnGenNo">重新生成</button>
+                        </div>
+                    </div>
+                    <div class="form-item">
+                        <label for="borrower">借用人 <em>*</em></label>
+                        <input type="text" id="borrower" value="{{ if .realname }}{{ .realname }}{{ else }}{{ .username }}{{ end }}" readonly>
+                    </div>
+                    <div class="form-item">
+                        <label for="department">借用人部门</label>
+                        <input type="text" id="department" name="department" value="{{ .form.Department }}" maxlength="50" placeholder="请输入部门（可选）">
+                    </div>
+                    <div class="form-item">
+                        <label for="borrowDate">借用时间</label>
+                        <input type="text" id="borrowDate" value="{{ .today }}" readonly>
+                    </div>
+                    <div class="form-item">
+                        <label for="days">借用天数 <em>*</em></label>
+                        <input type="number" id="days" name="days" value="{{ .days }}" min="1" max="365" step="1" required>
+                        <p class="form-hint">所有商品将使用相同的借用天数</p>
+                    </div>
+                    <div class="form-item">
+                        <label for="expectReturn">预计归还时间</label>
+                        <input type="text" id="expectReturn" readonly>
+                    </div>
+                </div>
+
+                <div class="card-title form-section-gap">商品清单</div>
+                <div class="borrow-items-head">
+                    <span>商品</span>
+                    <span>SN 码</span>
+                    <span>所在仓库</span>
+                    <span>可借数量</span>
+                    <span>借用数量 <em class="required-mark">*</em></span>
+                    <span>操作</span>
+                </div>
+                <div id="borrowRows">
+                    <div class="borrow-row borrow-row-template" data-row>
+                        <select name="productIds" class="borrow-row-product" required>
+                            <option value="">请选择商品</option>
+                        </select>
+                        <input type="text" class="borrow-row-sn" readonly placeholder="选择商品后带出">
+                        <input type="text" class="borrow-row-wh" readonly placeholder="选择商品后带出">
+                        <input type="text" class="borrow-row-avail" readonly placeholder="-">
+                        <input type="number" name="quantities" class="borrow-row-qty" min="1" step="1" value="1" required>
+                        <button type="button" class="btn btn-danger btn-sm borrow-row-remove">移除</button>
+                    </div>
+                    {{ range .draft }}
+                    <div class="borrow-row" data-row data-selected="{{ .ProductID }}" data-qty="{{ .Quantity }}">
+                        <select name="productIds" class="borrow-row-product" required>
+                            <option value="">请选择商品</option>
+                            {{ range $.options }}
+                            <option value="{{ .ID }}" {{ if eq .ID $.ProductID }}selected{{ end }}>{{ .Name }}</option>
+                            {{ end }}
+                        </select>
+                        <input type="text" class="borrow-row-sn" readonly placeholder="选择商品后带出">
+                        <input type="text" class="borrow-row-wh" readonly placeholder="选择商品后带出">
+                        <input type="text" class="borrow-row-avail" readonly placeholder="-">
+                        <input type="number" name="quantities" class="borrow-row-qty" min="1" step="1" value="{{ if .Quantity }}{{ .Quantity }}{{ else }}1{{ end }}" required>
+                        <button type="button" class="btn btn-danger btn-sm borrow-row-remove">移除</button>
+                    </div>
+                    {{ end }}
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="btnAddRow">+ 添加商品</button>
+
+                <div class="form-item form-item--full form-section-gap">
+                    <label for="remark">备注</label>
+                    <textarea id="remark" name="remark" maxlength="500" placeholder="请输入备注信息（可选）">{{ .form.Remark }}</textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">提交借用</button>
+                    <button type="reset" class="btn btn-outline">重 置</button>
+                </div>
+            </form>
+        </div>
+
+        <script>
+        (function () {
+            var options = {{ .options }};
+            var byId = {};
+            options.forEach(function (item) { byId[String(item.id)] = item; });
+
+            var rowsBox = document.getElementById('borrowRows');
+            var tpl = rowsBox.querySelector('.borrow-row-template');
+            var daysInput = document.getElementById('days');
+            var borrowDateText = document.getElementById('borrowDate').value;
+
+            function refreshRow(row) {
+                var sel = row.querySelector('.borrow-row-product');
+                var item = byId[sel.value];
+                row.querySelector('.borrow-row-sn').value = item ? item.sn : '';
+                row.querySelector('.borrow-row-wh').value = item ? item.warehouse : '';
+                row.querySelector('.borrow-row-avail').value = item ? item.available : '';
+                var qty = row.querySelector('.borrow-row-qty');
+                qty.max = item && item.available > 0 ? item.available : 1;
+                if (item && parseInt(qty.value, 10) > item.available) {
+                    qty.value = item.available > 0 ? item.available : 1;
+                }
+            }
+
+            function fillSelect(sel) {
+                sel.innerHTML = '<option value="">请选择商品</option>';
+                options.forEach(function (item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.name;
+                    sel.appendChild(opt);
+                });
+            }
+
+            function addRow(selectedId, qty) {
+                var row = tpl.cloneNode(true);
+                row.classList.remove('borrow-row-template');
+                fillSelect(row.querySelector('.borrow-row-product'));
+                if (selectedId) {
+                    row.querySelector('.borrow-row-product').value = String(selectedId);
+                }
+                if (qty) {
+                    row.querySelector('.borrow-row-qty').value = qty;
+                }
+                rowsBox.appendChild(row);
+                refreshRow(row);
+                syncRemoveButtons();
+                return row;
+            }
+
+            function syncRemoveButtons() {
+                var rows = rowsBox.querySelectorAll('[data-row]');
+                rows.forEach(function (row) {
+                    row.querySelector('.borrow-row-remove').style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+                });
+            }
+
+            rowsBox.addEventListener('change', function (e) {
+                if (e.target.classList.contains('borrow-row-product')) {
+                    refreshRow(e.target.closest('[data-row]'));
+                }
+            });
+            rowsBox.addEventListener('click', function (e) {
+                if (e.target.classList.contains('borrow-row-remove')) {
+                    var row = e.target.closest('[data-row]');
+                    if (rowsBox.querySelectorAll('[data-row]').length > 1) {
+                        row.remove();
+                        syncRemoveButtons();
+                    }
+                }
+            });
+            document.getElementById('btnAddRow').addEventListener('click', function () {
+                addRow('', 1);
+            });
+
+            // 服务端渲染的草稿行：填充下拉并带出快照信息
+            rowsBox.querySelectorAll('[data-row]').forEach(function (row) {
+                var sel = row.querySelector('.borrow-row-product');
+                if (!sel.options.length) {
+                    fillSelect(sel);
+                    if (row.dataset.selected) {
+                        sel.value = row.dataset.selected;
+                    }
+                }
+                if (parseInt(row.dataset.qty, 10) > 0) {
+                    row.querySelector('.borrow-row-qty').value = row.dataset.qty;
+                }
+                refreshRow(row);
+            });
+            tpl.remove();
+            if (!rowsBox.querySelectorAll('[data-row]').length) {
+                addRow('', 1);
+            }
+            syncRemoveButtons();
+
+            // 预计归还时间 = 借用时间 + 借用天数（展示用，最终以服务端计算为准）
+            function refreshExpect() {
+                var start = borrowDateText.replace(' ', 'T');
+                var startMs = Date.parse(start);
+                var days = parseInt(daysInput.value, 10);
+                if (isNaN(startMs) || isNaN(days) || days < 1) {
+                    document.getElementById('expectReturn').value = '';
+                    return;
+                }
+                var d = new Date(startMs + days * 86400000);
+                var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+                document.getElementById('expectReturn').value =
+                    d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+            }
+            daysInput.addEventListener('input', refreshExpect);
+            refreshExpect();
+
+            // 重新生成候选借用单号
+            document.getElementById('btnGenNo').addEventListener('click', function () {
+                fetch('/borrows/api/no')
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (data.no) {
+                            document.getElementById('borrowNo').value = data.no;
+                        }
+                    });
+            });
+
+            // 提交前数量上限校验（服务端事务内还会锁定商品重验）
+            document.getElementById('borrowForm').addEventListener('submit', function (e) {
+                var rows = rowsBox.querySelectorAll('[data-row]');
+                var hasItem = false;
+                for (var i = 0; i < rows.length; i++) {
+                    var sel = rows[i].querySelector('.borrow-row-product');
+                    var qty = rows[i].querySelector('.borrow-row-qty');
+                    if (!sel.value) { continue; }
+                    hasItem = true;
+                    var item = byId[sel.value];
+                    if (parseInt(qty.value, 10) > item.available) {
+                        e.preventDefault();
+                        alert('「' + item.name + '」借用数量超过可借数量（可借 ' + item.available + '）');
+                        return;
+                    }
+                }
+                if (!hasItem) {
+                    e.preventDefault();
+                    alert('请至少选择一件要借用的商品');
+                }
+            });
+        })();
+        </script>
+    </main>
+</div>
+</body>
+</html>

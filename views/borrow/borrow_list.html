@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-2">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item active" href="/borrows">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="javascript:void(0)">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head">
+            <h2>借用记录</h2>
+            <p>管理样品借用与归还</p>
+        </div>
+
+        <div class="toolbar">
+            <form class="search-form" method="get" action="/borrows">
+                <input type="text" name="keyword" value="{{ .keyword }}" placeholder="借用单号 / 借用人">
+                <select name="status">
+                    <option value="">全部状态</option>
+                    <option value="1" {{ if eq .status 1 }}selected{{ end }}>借用中</option>
+                    <option value="2" {{ if eq .status 2 }}selected{{ end }}>已归还</option>
+                </select>
+                <button type="submit" class="btn btn-ghost">搜索</button>
+            </form>
+            <div class="toolbar-actions">
+                <a class="btn btn-primary" href="/borrows/add">新建借用</a>
+                <a class="btn btn-outline" href="/">返回首页</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>借用单号</th>
+                    <th>借用人</th>
+                    <th>商品数</th>
+                    <th>借用数量</th>
+                    <th>借用时间</th>
+                    <th>预计归还时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{ range .orders }}
+                <tr>
+                    <td><a class="table-link" href="/borrows/{{ .ID }}">{{ .BorrowNo }}</a></td>
+                    <td>{{ .BorrowerName }}{{ if .Department }}（{{ .Department }}）{{ end }}</td>
+                    <td>{{ .ItemCount }}</td>
+                    <td>{{ .TotalQuantity }}</td>
+                    <td>{{ fmtDateTime .BorrowDate }}</td>
+                    <td>{{ fmtDate .ExpectReturnDate }}</td>
+                    <td>
+                        {{ if eq .Status 1 }}
+                            {{ if .Overdue }}<span class="tag tag-danger">逾期</span>{{ else }}<span class="tag tag-warning">借用中</span>{{ end }}
+                        {{ else if eq .Status 2 }}
+                            <span class="tag tag-success">已归还</span>
+                        {{ else }}
+                            <span class="tag">已取消</span>
+                        {{ end }}
+                    </td>
+                    <td>
+                        <a class="btn btn-ghost btn-sm" href="/borrows/{{ .ID }}">详情</a>
+                        {{ if eq .Status 1 }}
+                        <form class="inline-form" method="post" action="/borrows/return/{{ .ID }}" onsubmit="return confirm('确认将该借用单全部商品归还入库？')">
+                            <button type="submit" class="btn btn-outline btn-sm">归还</button>
+                        </form>
+                        {{ end }}
+                    </td>
+                </tr>
+                {{ else }}
+                <tr>
+                    <td colspan="8" class="empty-tip">暂无借用记录，点击右上角「新建借用」登记</td>
+                </tr>
+                {{ end }}
+                </tbody>
+            </table>
+
+            {{ if gt .totalPages 1 }}
+            <div class="pager">
+                {{ if gt .page 1 }}
+                <a class="btn btn-outline btn-sm" href="/borrows?page={{ dec .page }}&keyword={{ .keyword }}&status={{ .status }}">上一页</a>
+                {{ end }}
+                <span class="pager-info">第 {{ .page }} / {{ .totalPages }} 页，共 {{ .total }} 条</span>
+                {{ if lt .page .totalPages }}
+                <a class="btn btn-outline btn-sm" href="/borrows?page={{ inc .page }}&keyword={{ .keyword }}&status={{ .status }}">下一页</a>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="pager"><span class="pager-info">共 {{ .total }} 条</span></div>
+            {{ end }}
+        </div>
+    </main>
+</div>
+</body>
+</html>

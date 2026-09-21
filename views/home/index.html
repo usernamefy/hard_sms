@@ -26,7 +26,7 @@
                 <a class="home-menu-item active" href="/">主页</a>
                 <a class="home-menu-item" href="/products">商品入库</a>
                 <a class="home-menu-item" href="/warehouses">仓库管理</a>
-                <a class="home-menu-item" href="javascript:void(0)">借用记录</a>
+                <a class="home-menu-item" href="/borrows">借用记录</a>
                 <a class="home-menu-item" href="javascript:void(0)">样品异动</a>
                 <a class="home-menu-item" href="javascript:void(0)">盘点管理</a>
                 <a class="home-menu-item" href="/users">用户管理</a>
@@ -43,11 +43,11 @@
             <div class="home-card">
                 <div class="home-card-head">快捷操作</div>
                 <div class="home-quick-grid">
-                    <a class="home-quick-item" href="javascript:void(0)">
+                    <a class="home-quick-item" href="/borrows/add">
                         <span class="home-quick-icon">📤</span>
                         <span class="home-quick-label">借用</span>
                     </a>
-                    <a class="home-quick-item" href="javascript:void(0)">
+                    <a class="home-quick-item" href="/borrows">
                         <span class="home-quick-icon">📥</span>
                         <span class="home-quick-label">归还</span>
                     </a>
@@ -74,7 +74,7 @@
                         <div class="home-stat-label">仓库数量</div>
                     </div>
                     <div class="home-stat-item">
-                        <div class="home-stat-num">0</div>
+                        <div class="home-stat-num">{{ .borrowingQty }}</div>
                         <div class="home-stat-label">借用中</div>
                     </div>
                     <div class="home-stat-item">

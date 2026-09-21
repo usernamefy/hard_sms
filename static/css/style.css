@@ -387,9 +387,62 @@ a {
     color: #16a34a;
 }
 
+.tag-warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
 .tag-danger {
     background: #fee2e2;
     color: #dc2626;
+}
+
+/* ========== 借用管理 ========== */
+.borrow-items-head {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) 100px 120px 70px;
+    gap: 10px;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.borrow-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) 100px 120px 70px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.borrow-row select,
+.borrow-row input {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 13px;
+    background: #fff;
+    outline: none;
+}
+
+.borrow-row select:focus,
+.borrow-row input:focus {
+    border-color: #6366f1;
+}
+
+.borrow-row input[readonly] {
+    background: #f8fafc;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.required-mark {
+    color: #dc2626;
+    font-style: normal;
 }
 
 .pager {

@@ -56,6 +56,10 @@ type Product struct {
 	CreatedByName string `gorm:"-" json:"createdByName"`
 	AgeDays       int64  `gorm:"-" json:"ageDays"` // 库龄（天）= 当前日期 - 入库日期
 
+	// 借用流水口径（见 docs/借用管理技术方案.md 3.2）：由借用明细汇总
+	BorrowedQty int `gorm:"-" json:"borrowedQty"` // 已借出数量 = 借用中明细的未归还数量
+	InStockQty  int `gorm:"-" json:"inStockQty"`  // 在库/可借数量 = (status==1 ? quantity : 0) - 已借出数量
+
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -241,6 +245,25 @@ func fillProductDisplay(db *gorm.DB, products []Product) {
 			for i := range products {
 				if products[i].CreatedBy != nil {
 					products[i].CreatedByName = names[*products[i].CreatedBy]
+				}
+			}
+		}
+	}
+
+	// 借用流水口径：已借出数量与在库数量由借用明细汇总（查询时计算，不落库）
+	productIDs := make([]uint, 0, len(products))
+	for i := range products {
+		productIDs = appendUniqueID(productIDs, products[i].ID)
+	}
+	if len(productIDs) > 0 {
+		borrowed := ActiveBorrowedQtyMap(db, productIDs)
+		for i := range products {
+			p := &products[i]
+			p.BorrowedQty = borrowed[p.ID]
+			if p.Status == ProductStatusInStock {
+				p.InStockQty = p.Quantity - p.BorrowedQty
+				if p.InStockQty < 0 {
+					p.InStockQty = 0
 				}
 			}
 		}

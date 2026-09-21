@@ -95,3 +95,42 @@ CREATE TABLE IF NOT EXISTS `tbl_products` (
   KEY `idx_tbl_products_inbound_date` (`inbound_date`),
   KEY `idx_tbl_products_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表（一台实物一条记录）';
+
+-- 6. 借用单主表
+CREATE TABLE IF NOT EXISTS `tbl_borrow_orders` (
+  `id`                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `borrow_no`          VARCHAR(50)  NOT NULL COMMENT '借用单号（自动生成，唯一）',
+  `borrower_id`        INT UNSIGNED NOT NULL COMMENT '借用人，关联 tbl_users.id',
+  `borrower_name`      VARCHAR(50)  NOT NULL COMMENT '借用人展示名（快照）',
+  `department`         VARCHAR(50)  DEFAULT NULL COMMENT '借用人部门',
+  `borrow_date`        DATETIME     NOT NULL COMMENT '借用时间（系统自动）',
+  `days`               INT          NOT NULL COMMENT '借用天数（1~365）',
+  `expect_return_date` DATE         NOT NULL COMMENT '预计归还时间 = 借用时间 + 天数',
+  `actual_return_date` DATETIME     DEFAULT NULL COMMENT '实际归还时间',
+  `status`             INT          NOT NULL COMMENT '1 借用中 / 2 已归还（0 预留已取消）',
+  `remark`             VARCHAR(500) DEFAULT NULL,
+  `created_at`         DATETIME     DEFAULT NULL,
+  `updated_at`         DATETIME     DEFAULT NULL,
+  `deleted_at`         DATETIME     DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tbl_borrow_orders_no` (`borrow_no`),
+  KEY `idx_tbl_borrow_orders_borrower` (`borrower_id`),
+  KEY `idx_tbl_borrow_orders_status` (`status`),
+  KEY `idx_tbl_borrow_orders_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='借用单主表';
+
+-- 7. 借用明细表
+CREATE TABLE IF NOT EXISTS `tbl_borrow_items` (
+  `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `order_id`          INT UNSIGNED NOT NULL COMMENT '所属借用单，关联 tbl_borrow_orders.id',
+  `product_id`        INT UNSIGNED NOT NULL COMMENT '商品，关联 tbl_products.id',
+  `product_name`      VARCHAR(100) NOT NULL COMMENT '商品名称快照',
+  `product_sn`        VARCHAR(50)  NOT NULL COMMENT 'SN 快照',
+  `quantity`          INT          NOT NULL COMMENT '借用数量',
+  `returned_quantity` INT          NOT NULL DEFAULT 0 COMMENT '已归还数量',
+  `created_at`        DATETIME     DEFAULT NULL,
+  `updated_at`        DATETIME     DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tbl_borrow_items_order` (`order_id`),
+  KEY `idx_tbl_borrow_items_product` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='借用明细表';
