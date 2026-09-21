@@ -151,6 +151,7 @@ func (c *ProductController) DoAdd(ctx *gin.Context) {
 		fail("入库失败：" + err.Error())
 		return
 	}
+	recordOperation(ctx, "商品入库", "商品入库", "商品「"+product.Name+"」入库（SN："+product.SN+"）")
 	saveProductImageFile(product, imgData, imgExt, "")
 	ctx.Redirect(http.StatusFound, productDetailPath(strconv.FormatUint(uint64(product.ID), 10)))
 }

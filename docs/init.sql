@@ -134,3 +134,17 @@ CREATE TABLE IF NOT EXISTS `tbl_borrow_items` (
   KEY `idx_tbl_borrow_items_order` (`order_id`),
   KEY `idx_tbl_borrow_items_product` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='借用明细表';
+
+-- 8. 操作日志表
+CREATE TABLE IF NOT EXISTS `tbl_operation_logs` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id`    INT UNSIGNED DEFAULT NULL COMMENT '操作人，关联 tbl_users.id',
+  `user_name`  VARCHAR(50)  DEFAULT NULL COMMENT '操作人展示名（快照）',
+  `module`     VARCHAR(20)  NOT NULL COMMENT '模块：商品入库/仓库管理/用户管理/借用管理',
+  `action`     VARCHAR(20)  NOT NULL COMMENT '操作类型：创建/编辑/删除/借用/归还',
+  `detail`     VARCHAR(500) DEFAULT NULL COMMENT '操作内容',
+  `created_at` DATETIME     DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tbl_operation_logs_user` (`user_id`),
+  KEY `idx_tbl_operation_logs_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';

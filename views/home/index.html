@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20260921-7">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-8">
 </head>
 <body class="home-body">
     <header class="home-topbar">
@@ -30,7 +30,7 @@
                 <a class="home-menu-item" href="javascript:void(0)">样品异动</a>
                 <a class="home-menu-item" href="javascript:void(0)">盘点管理</a>
                 <a class="home-menu-item" href="/users">用户管理</a>
-                <a class="home-menu-item" href="javascript:void(0)">操作日志</a>
+                <a class="home-menu-item" href="/logs">操作日志</a>
             </nav>
         </aside>
 
@@ -66,11 +66,11 @@
                 <div class="home-card-head">数据概览</div>
                 <div class="home-stat-grid">
                     <div class="home-stat-item">
-                        <div class="home-stat-num">0</div>
+                        <div class="home-stat-num">{{ .productCount }}</div>
                         <div class="home-stat-label">商品总数</div>
                     </div>
                     <div class="home-stat-item">
-                        <div class="home-stat-num">0</div>
+                        <div class="home-stat-num">{{ .warehouseCount }}</div>
                         <div class="home-stat-label">仓库数量</div>
                     </div>
                     <div class="home-stat-item">
@@ -82,6 +82,23 @@
                         <div class="home-stat-label">待盘点</div>
                     </div>
                 </div>
+            </div>
+
+            <div class="home-card">
+                <div class="home-card-head">最近操作</div>
+                {{ if .recentLogs }}
+                <div class="recent-op-list">
+                    {{ range .recentLogs }}
+                    <div class="recent-op-item">
+                        <span class="recent-op-user">{{ if .UserName }}{{ .UserName }}{{ else }}系统{{ end }}</span>
+                        <span class="recent-op-detail">{{ if .Detail }}{{ .Detail }}{{ else }}{{ .Module }} · {{ .Action }}{{ end }}</span>
+                        <span class="recent-op-time">{{ fmtDateTime .CreatedAt }}</span>
+                    </div>
+                    {{ end }}
+                </div>
+                {{ else }}
+                <p class="form-hint">暂无操作记录</p>
+                {{ end }}
             </div>
         </main>
     </div>

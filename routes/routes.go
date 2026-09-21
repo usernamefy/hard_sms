@@ -39,6 +39,11 @@ func fmtDate(t time.Time) string {
 	return t.Format("2006-01-02")
 }
 
+// seq 计算列表序号：(页码-1)*每页条数 + 行索引 + 1
+func seq(page, size, i int) int {
+	return (page-1)*size + i + 1
+}
+
 // money 金额展示：￥ + 千分位 + 两位小数（未填写显示 -）
 func money(v *float64) string {
 	if v == nil {
@@ -66,8 +71,11 @@ func Setup() *gin.Engine {
 		"fmtDateTime": fmtDateTime,
 		"fmtDate":     fmtDate,
 		"money":       money,
+		"seq":         seq,
 		"inc":         func(i int) int { return i + 1 },
 		"dec":         func(i int) int { return i - 1 },
+
+		"operationLogActionClass": controllers.OperationLogActionClass,
 	})
 
 	// 静态资源
@@ -134,6 +142,9 @@ func Setup() *gin.Engine {
 		admin.GET("/borrows/api/products", controllers.BorrowCtl.SearchProducts)
 		admin.POST("/borrows/return/:id", controllers.BorrowCtl.Return)
 		admin.GET("/borrows/:id", controllers.BorrowCtl.Detail)
+
+		// 操作日志
+		admin.GET("/logs", controllers.OperationLogCtl.List)
 
 		admin.GET("/logout", controllers.UserCtl.Logout)
 	}

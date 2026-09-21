@@ -191,6 +191,11 @@ func (c *BorrowController) DoAdd(ctx *gin.Context) {
 		fail("借用失败：" + err.Error())
 		return
 	}
+	totalQty := 0
+	for _, in := range inputs {
+		totalQty += in.Quantity
+	}
+	recordOperation(ctx, "借用管理", "借用", "新建借用单「"+order.BorrowNo+"」，共 "+strconv.Itoa(len(inputs))+" 种商品 "+strconv.Itoa(totalQty)+" 件")
 	ctx.Redirect(http.StatusFound, "/borrows/"+strconv.FormatUint(uint64(order.ID), 10))
 }
 
@@ -219,6 +224,9 @@ func (c *BorrowController) Return(ctx *gin.Context) {
 	if err != nil {
 		ctx.Redirect(http.StatusFound, detailPath+"?error="+err.Error())
 		return
+	}
+	if order, err := models.GetBorrowByID(uint(id)); err == nil {
+		recordOperation(ctx, "借用管理", "归还", "借用单「"+order.BorrowNo+"」整单归还")
 	}
 	ctx.Redirect(http.StatusFound, detailPath)
 }
