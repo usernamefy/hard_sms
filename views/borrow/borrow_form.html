@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20260921-2">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260921-5">
 </head>
 <body class="admin-body">
 {{ template "topbar" . }}
@@ -26,7 +26,7 @@
         <div class="page-head page-head-row">
             <div>
                 <h2>新建借用</h2>
-                <p>选择在库商品并登记借用数量，提交后生成借用单</p>
+                <p>搜索商品并登记借用数量，提交后生成借用单</p>
             </div>
             <a class="btn btn-outline" href="/borrows">返回列表</a>
         </div>
@@ -35,6 +35,12 @@
             {{ if .error }}
             <div class="login-alert">{{ .error }}</div>
             {{ end }}
+
+            <div class="borrow-search">
+                <input type="text" id="productSearch" placeholder="输入商品名称 / SKU，回车搜索" autocomplete="off">
+                <button type="button" class="btn btn-ghost" id="btnSearch">搜索</button>
+            </div>
+            <div id="searchResults" class="product-card-list"></div>
 
             <form method="post" action="{{ .action }}" class="admin-form" id="borrowForm">
                 <div class="card-title">借用信息</div>
@@ -69,43 +75,32 @@
                     </div>
                 </div>
 
-                <div class="card-title form-section-gap">商品清单</div>
-                <div class="borrow-items-head">
-                    <span>商品</span>
-                    <span>SN 码</span>
-                    <span>所在仓库</span>
-                    <span>可借数量</span>
-                    <span>借用数量 <em class="required-mark">*</em></span>
-                    <span>操作</span>
-                </div>
-                <div id="borrowRows">
-                    <div class="borrow-row borrow-row-template" data-row>
-                        <select name="productIds" class="borrow-row-product" required>
-                            <option value="">请选择商品</option>
-                        </select>
-                        <input type="text" class="borrow-row-sn" readonly placeholder="选择商品后带出">
-                        <input type="text" class="borrow-row-wh" readonly placeholder="选择商品后带出">
-                        <input type="text" class="borrow-row-avail" readonly placeholder="-">
-                        <input type="number" name="quantities" class="borrow-row-qty" min="1" step="1" value="1" required>
-                        <button type="button" class="btn btn-danger btn-sm borrow-row-remove">移除</button>
-                    </div>
-                    {{ range .draft }}
-                    <div class="borrow-row" data-row data-selected="{{ .ProductID }}" data-qty="{{ .Quantity }}">
-                        <select name="productIds" class="borrow-row-product" required>
-                            <option value="">请选择商品</option>
-                            {{ range $.options }}
-                            <option value="{{ .ID }}" {{ if eq .ID $.ProductID }}selected{{ end }}>{{ .Name }}</option>
-                            {{ end }}
-                        </select>
-                        <input type="text" class="borrow-row-sn" readonly placeholder="选择商品后带出">
-                        <input type="text" class="borrow-row-wh" readonly placeholder="选择商品后带出">
-                        <input type="text" class="borrow-row-avail" readonly placeholder="-">
-                        <input type="number" name="quantities" class="borrow-row-qty" min="1" step="1" value="{{ if .Quantity }}{{ .Quantity }}{{ else }}1{{ end }}" required>
-                        <button type="button" class="btn btn-danger btn-sm borrow-row-remove">移除</button>
-                    </div>
+                <div class="card-title">商品清单</div>
+                <table class="data-table borrow-table">
+                    <thead>
+                    <tr>
+                        <th>商品名称</th>
+                        <th>SN 码</th>
+                        <th>所在仓库</th>
+                        <th>可借数量</th>
+                        <th>借用数量 <em class="required-mark">*</em></th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="borrowRows">
+                    {{ range .rows }}
+                    <tr>
+                        <td>{{ .Name }}</td>
+                        <td>{{ .SN }}</td>
+                        <td>{{ if .Warehouse }}{{ .Warehouse }}{{ else }}-{{ end }}</td>
+                        <td>{{ .Available }}</td>
+                        <td><input type="hidden" name="productIds" value="{{ .ProductID }}"><input type="number" name="quantities" class="qty-input" min="1" step="1" value="{{ .Quantity }}" data-avail="{{ .Available }}" required></td>
+                        <td><button type="button" class="btn btn-danger btn-sm row-remove">移除</button></td>
+                    </tr>
                     {{ end }}
-                </div>
-                <button type="button" class="btn btn-ghost btn-sm" id="btnAddRow">+ 添加商品</button>
+                    </tbody>
+                </table>
+                <p class="form-hint" id="borrowEmptyTip" {{ if .rows }}hidden{{ end }}>清单为空，请通过上方搜索添加商品</p>
 
                 <div class="form-item form-item--full form-section-gap">
                     <label for="remark">备注</label>
@@ -121,103 +116,143 @@
 
         <script>
         (function () {
-            var options = {{ .options }};
-            var byId = {};
-            options.forEach(function (item) { byId[String(item.id)] = item; });
-
+            var searchInput = document.getElementById('productSearch');
+            var searchBtn = document.getElementById('btnSearch');
+            var resultBox = document.getElementById('searchResults');
             var rowsBox = document.getElementById('borrowRows');
-            var tpl = rowsBox.querySelector('.borrow-row-template');
+            var emptyTip = document.getElementById('borrowEmptyTip');
             var daysInput = document.getElementById('days');
             var borrowDateText = document.getElementById('borrowDate').value;
 
-            function refreshRow(row) {
-                var sel = row.querySelector('.borrow-row-product');
-                var item = byId[sel.value];
-                row.querySelector('.borrow-row-sn').value = item ? item.sn : '';
-                row.querySelector('.borrow-row-wh').value = item ? item.warehouse : '';
-                row.querySelector('.borrow-row-avail').value = item ? item.available : '';
-                var qty = row.querySelector('.borrow-row-qty');
-                qty.max = item && item.available > 0 ? item.available : 1;
-                if (item && parseInt(qty.value, 10) > item.available) {
-                    qty.value = item.available > 0 ? item.available : 1;
-                }
-            }
-
-            function fillSelect(sel) {
-                sel.innerHTML = '<option value="">请选择商品</option>';
-                options.forEach(function (item) {
-                    var opt = document.createElement('option');
-                    opt.value = item.id;
-                    opt.textContent = item.name;
-                    sel.appendChild(opt);
+            function esc(s) {
+                return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
                 });
             }
 
-            function addRow(selectedId, qty) {
-                var row = tpl.cloneNode(true);
-                row.classList.remove('borrow-row-template');
-                fillSelect(row.querySelector('.borrow-row-product'));
-                if (selectedId) {
-                    row.querySelector('.borrow-row-product').value = String(selectedId);
-                }
-                if (qty) {
-                    row.querySelector('.borrow-row-qty').value = qty;
-                }
-                rowsBox.appendChild(row);
-                refreshRow(row);
-                syncRemoveButtons();
-                return row;
+            function findInList(id) {
+                return rowsBox.querySelector('input[name="productIds"][value="' + id + '"]');
             }
 
-            function syncRemoveButtons() {
-                var rows = rowsBox.querySelectorAll('[data-row]');
-                rows.forEach(function (row) {
-                    row.querySelector('.borrow-row-remove').style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+            function syncEmptyTip() {
+                emptyTip.hidden = rowsBox.querySelectorAll('tr').length > 0;
+            }
+
+            // 预览卡片按钮状态：已在清单中 / 无可借库存 / 可添加
+            function syncCardButtons() {
+                resultBox.querySelectorAll('.product-card').forEach(function (card) {
+                    var btn = card.querySelector('.add-to-list');
+                    var avail = Number(card.dataset.avail);
+                    if (findInList(card.dataset.id)) {
+                        btn.disabled = true;
+                        btn.textContent = '已在清单中';
+                    } else if (avail <= 0) {
+                        btn.disabled = true;
+                        btn.textContent = '无可借库存';
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = '添加到列表';
+                    }
                 });
             }
 
-            rowsBox.addEventListener('change', function (e) {
-                if (e.target.classList.contains('borrow-row-product')) {
-                    refreshRow(e.target.closest('[data-row]'));
+            function updateQtyState(input) {
+                var max = Number(input.dataset.avail);
+                var v = parseInt(input.value, 10);
+                var bad = isNaN(v) || v < 1 || v > max;
+                input.classList.toggle('qty-error', bad);
+                return !bad;
+            }
+
+            function bindRow(row) {
+                var qty = row.querySelector('.qty-input');
+                qty.addEventListener('input', function () { updateQtyState(qty); });
+                row.querySelector('.row-remove').addEventListener('click', function () {
+                    row.remove();
+                    syncCardButtons();
+                    syncEmptyTip();
+                });
+                updateQtyState(qty);
+            }
+
+            function addRow(item) {
+                if (findInList(item.id)) return;
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + esc(item.name) + '</td>' +
+                    '<td>' + esc(item.sn) + '</td>' +
+                    '<td>' + esc(item.warehouse || '-') + '</td>' +
+                    '<td>' + item.available + '</td>' +
+                    '<td><input type="hidden" name="productIds" value="' + item.id + '">' +
+                    '<input type="number" name="quantities" class="qty-input" min="1" step="1" value="1" data-avail="' + item.available + '" required></td>' +
+                    '<td><button type="button" class="btn btn-danger btn-sm row-remove">移除</button></td>';
+                rowsBox.appendChild(tr);
+                bindRow(tr);
+                syncCardButtons();
+                syncEmptyTip();
+            }
+
+            function renderResults(list) {
+                resultBox.innerHTML = '';
+                if (!list || !list.length) {
+                    var tip = document.createElement('div');
+                    tip.className = 'search-empty';
+                    tip.textContent = '未找到相关商品';
+                    resultBox.appendChild(tip);
+                    return;
                 }
-            });
-            rowsBox.addEventListener('click', function (e) {
-                if (e.target.classList.contains('borrow-row-remove')) {
-                    var row = e.target.closest('[data-row]');
-                    if (rowsBox.querySelectorAll('[data-row]').length > 1) {
-                        row.remove();
-                        syncRemoveButtons();
-                    }
+                list.forEach(function (item) {
+                    var card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.dataset.id = item.id;
+                    card.dataset.avail = item.available;
+                    var thumb = item.image ? '<img src="' + esc(item.image) + '" alt="">' : '无图';
+                    var sub = 'SN 码：' + esc(item.sn) + (item.sku ? ' · SKU：' + esc(item.sku) : '');
+                    card.innerHTML =
+                        '<div class="product-thumb">' + thumb + '</div>' +
+                        '<div class="product-info">' +
+                        '<div class="product-name">' + esc(item.name) + '</div>' +
+                        '<div class="product-sub">' + sub + '</div>' +
+                        '<div class="product-sub">所在仓库：' + esc(item.warehouse || '-') + '</div>' +
+                        '</div>' +
+                        '<div class="product-side">' +
+                        '<div class="product-avail"><b>' + item.available + '</b><span>可借数量</span></div>' +
+                        '<button type="button" class="btn btn-primary btn-sm add-to-list">添加到列表</button>' +
+                        '</div>';
+                    card.querySelector('.add-to-list').addEventListener('click', function () {
+                        addRow(item);
+                    });
+                    resultBox.appendChild(card);
+                });
+                syncCardButtons();
+            }
+
+            function doSearch() {
+                var q = searchInput.value.trim();
+                if (!q) return;
+                searchBtn.disabled = true;
+                fetch('/borrows/api/products?q=' + encodeURIComponent(q))
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) { renderResults(data.products || []); })
+                    .catch(function () { renderResults([]); })
+                    .finally(function () { searchBtn.disabled = false; });
+            }
+
+            searchBtn.addEventListener('click', doSearch);
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    doSearch();
                 }
-            });
-            document.getElementById('btnAddRow').addEventListener('click', function () {
-                addRow('', 1);
             });
 
-            // 服务端渲染的草稿行：填充下拉并带出快照信息
-            rowsBox.querySelectorAll('[data-row]').forEach(function (row) {
-                var sel = row.querySelector('.borrow-row-product');
-                if (!sel.options.length) {
-                    fillSelect(sel);
-                    if (row.dataset.selected) {
-                        sel.value = row.dataset.selected;
-                    }
-                }
-                if (parseInt(row.dataset.qty, 10) > 0) {
-                    row.querySelector('.borrow-row-qty').value = row.dataset.qty;
-                }
-                refreshRow(row);
-            });
-            tpl.remove();
-            if (!rowsBox.querySelectorAll('[data-row]').length) {
-                addRow('', 1);
-            }
-            syncRemoveButtons();
+            // 服务端校验失败回显的清单行
+            rowsBox.querySelectorAll('tr').forEach(bindRow);
+            syncEmptyTip();
 
             // 预计归还时间 = 借用时间 + 借用天数（展示用，最终以服务端计算为准）
             function refreshExpect() {
-                var start = borrowDateText.replace(' ', 'T');
-                var startMs = Date.parse(start);
+                var startMs = Date.parse(borrowDateText.replace(' ', 'T'));
                 var days = parseInt(daysInput.value, 10);
                 if (isNaN(startMs) || isNaN(days) || days < 1) {
                     document.getElementById('expectReturn').value = '';
@@ -242,25 +277,21 @@
                     });
             });
 
-            // 提交前数量上限校验（服务端事务内还会锁定商品重验）
+            // 提交前校验（服务端事务内还会锁定商品重验）
             document.getElementById('borrowForm').addEventListener('submit', function (e) {
-                var rows = rowsBox.querySelectorAll('[data-row]');
-                var hasItem = false;
-                for (var i = 0; i < rows.length; i++) {
-                    var sel = rows[i].querySelector('.borrow-row-product');
-                    var qty = rows[i].querySelector('.borrow-row-qty');
-                    if (!sel.value) { continue; }
-                    hasItem = true;
-                    var item = byId[sel.value];
-                    if (parseInt(qty.value, 10) > item.available) {
-                        e.preventDefault();
-                        alert('「' + item.name + '」借用数量超过可借数量（可借 ' + item.available + '）');
-                        return;
-                    }
-                }
-                if (!hasItem) {
+                var rows = rowsBox.querySelectorAll('tr');
+                if (!rows.length) {
                     e.preventDefault();
-                    alert('请至少选择一件要借用的商品');
+                    alert('请通过搜索添加至少一件要借用的商品');
+                    return;
+                }
+                var ok = true;
+                rows.forEach(function (row) {
+                    ok = updateQtyState(row.querySelector('.qty-input')) && ok;
+                });
+                if (!ok) {
+                    e.preventDefault();
+                    alert('借用数量需在 1 ~ 可借数量 之间');
                 }
             });
         })();

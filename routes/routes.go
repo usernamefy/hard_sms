@@ -131,6 +131,7 @@ func Setup() *gin.Engine {
 		admin.GET("/borrows/add", controllers.BorrowCtl.Add)
 		admin.POST("/borrows/add", controllers.BorrowCtl.DoAdd)
 		admin.GET("/borrows/api/no", controllers.BorrowCtl.GenerateNo)
+		admin.GET("/borrows/api/products", controllers.BorrowCtl.SearchProducts)
 		admin.POST("/borrows/return/:id", controllers.BorrowCtl.Return)
 		admin.GET("/borrows/:id", controllers.BorrowCtl.Detail)
 

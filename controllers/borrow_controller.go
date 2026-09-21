@@ -35,6 +35,16 @@ type borrowItemDraft struct {
 	Quantity  int
 }
 
+// borrowRowView 校验失败回显表单时，商品清单行的商品快照数据
+type borrowRowView struct {
+	ProductID uint
+	Name      string
+	SN        string
+	Warehouse string
+	Available int
+	Quantity  int
+}
+
 // borrowStatusText 借用单状态文案
 func borrowStatusText(status int) string {
 	if status == models.BorrowOrderStatusActive {
@@ -91,6 +101,43 @@ func (c *BorrowController) GenerateNo(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"no": no})
+}
+
+// SearchProducts 商品搜索接口（JSON）：按商品名称/SKU 模糊搜索在库商品，
+// 供新建借用页搜索预览并添加到借用清单
+func (c *BorrowController) SearchProducts(ctx *gin.Context) {
+	products, err := models.SearchBorrowableProducts(ctx.Query("q"), 10)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "搜索商品失败"})
+		return
+	}
+	type productHit struct {
+		ID        uint   `json:"id"`
+		Name      string `json:"name"`
+		SN        string `json:"sn"`
+		SKU       string `json:"sku"`
+		Warehouse string `json:"warehouse"`
+		Available int    `json:"available"`
+		Image     string `json:"image"`
+	}
+	hits := make([]productHit, 0, len(products))
+	for i := range products {
+		p := &products[i]
+		image := ""
+		if p.Image != "" {
+			image = "/static/" + p.Image
+		}
+		hits = append(hits, productHit{
+			ID:        p.ID,
+			Name:      p.Name,
+			SN:        p.SN,
+			SKU:       p.SKU,
+			Warehouse: p.WarehouseName,
+			Available: p.InStockQty,
+			Image:     image,
+		})
+	}
+	ctx.JSON(http.StatusOK, gin.H{"products": hits})
 }
 
 // DoAdd 处理新建借用提交
@@ -216,30 +263,25 @@ func parseBorrowDraft(form *borrowForm) []borrowItemDraft {
 	return draft
 }
 
-// renderForm 渲染新建借用表单（在库商品下拉 + 商品清单草稿回显）
+// renderForm 渲染新建借用表单；draft 为空时清单无行（通过搜索添加商品），
+// 校验失败回显时按草稿行带出商品快照信息
 func (c *BorrowController) renderForm(ctx *gin.Context, action string, form borrowForm, draft []borrowItemDraft, errMsg string) {
-	products, err := models.ListBorrowableProducts()
-	if err != nil {
-		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "查询在库商品失败"})
-		return
-	}
-
-	// 下拉 option 数据（含可借数量），商品清单的动态行由前端脚本生成
-	type productOption struct {
-		ID        uint   `json:"id"`
-		Name      string `json:"name"`
-		SN        string `json:"sn"`
-		Warehouse string `json:"warehouse"`
-		Available int    `json:"available"`
-	}
-	options := make([]productOption, 0, len(products))
-	for i := range products {
-		options = append(options, productOption{
-			ID:        products[i].ID,
-			Name:      products[i].Name,
-			SN:        products[i].SN,
-			Warehouse: products[i].WarehouseName,
-			Available: products[i].InStockQty,
+	rows := make([]borrowRowView, 0, len(draft))
+	for _, d := range draft {
+		if d.ProductID == 0 {
+			continue
+		}
+		p, err := models.GetProductByID(d.ProductID)
+		if err != nil {
+			continue
+		}
+		rows = append(rows, borrowRowView{
+			ProductID: p.ID,
+			Name:      p.Name,
+			SN:        p.SN,
+			Warehouse: p.WarehouseName,
+			Available: p.InStockQty,
+			Quantity:  d.Quantity,
 		})
 	}
 
@@ -257,21 +299,15 @@ func (c *BorrowController) renderForm(ctx *gin.Context, action string, form borr
 		borrowNo = no
 	}
 
-	// 草稿为空（首次进入）时渲染一行空行
-	if len(draft) == 0 {
-		draft = []borrowItemDraft{{}}
-	}
-
 	ctx.HTML(http.StatusOK, "borrow_form.html", userPageData(ctx, gin.H{
-		"title":     "新建借用 - 库存管理系统",
-		"action":    action,
-		"form":      form,
-		"days":      days,
-		"borrowNo":  borrowNo,
-		"options":   options,
-		"draft":     draft,
-		"error":     errMsg,
-		"today":     time.Now().Format("2006-01-02 15:04"),
+		"title":    "新建借用 - 库存管理系统",
+		"action":   action,
+		"form":     form,
+		"days":     days,
+		"borrowNo": borrowNo,
+		"rows":     rows,
+		"error":    errMsg,
+		"today":    time.Now().Format("2006-01-02 15:04"),
 	}))
 }
 

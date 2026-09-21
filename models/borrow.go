@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -354,10 +355,18 @@ func ActiveBorrowedTotal() (int, error) {
 	return total, err
 }
 
-// ListBorrowableProducts 在库商品列表（新建借用下拉数据源），含借用流水口径的可借数量
-func ListBorrowableProducts() ([]Product, error) {
+// SearchBorrowableProducts 按商品名称/SKU 模糊搜索在库商品（新建借用搜索预览），含可借数量
+func SearchBorrowableProducts(keyword string, limit int) ([]Product, error) {
+	db := DB.Where("status = ?", ProductStatusInStock)
+	if kw := strings.TrimSpace(keyword); kw != "" {
+		like := "%" + kw + "%"
+		db = db.Where("name LIKE ? OR sku LIKE ?", like, like)
+	}
+	if limit < 1 || limit > 50 {
+		limit = 10
+	}
 	var products []Product
-	if err := DB.Where("status = ?", ProductStatusInStock).Order("id DESC").Find(&products).Error; err != nil {
+	if err := db.Order("id DESC").Limit(limit).Find(&products).Error; err != nil {
 		return nil, err
 	}
 	fillProductDisplay(DB, products)
