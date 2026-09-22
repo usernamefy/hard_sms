@@ -473,12 +473,11 @@ func fillReturnItemLocation(db *gorm.DB, items []BorrowReturnItem) {
 	}
 }
 
-// SearchBorrowableProducts 按商品名称/SKU 模糊搜索在库商品（新建借用搜索预览），含可借数量
+// SearchBorrowableProducts 按 SN 码模糊搜索在库商品（新建借用搜索预览），含可借数量
 func SearchBorrowableProducts(keyword string, limit int) ([]Product, error) {
 	db := DB.Where("status = ?", ProductStatusInStock)
 	if kw := strings.TrimSpace(keyword); kw != "" {
-		like := "%" + kw + "%"
-		db = db.Where("name LIKE ? OR sku LIKE ?", like, like)
+		db = db.Where("sn LIKE ?", "%"+kw+"%")
 	}
 	if limit < 1 || limit > 50 {
 		limit = 10
