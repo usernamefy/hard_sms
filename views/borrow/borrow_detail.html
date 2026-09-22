@@ -93,6 +93,7 @@
                     <th>商品名称</th>
                     <th>SN 码</th>
                     <th>所在仓库</th>
+                    <th>所在仓位</th>
                     <th>借用数量</th>
                     <th>已归还数量</th>
                     <th>未归还数量</th>
@@ -104,25 +105,18 @@
                     <td><a class="table-link" href="/products/{{ .ProductID }}">{{ .ProductName }}</a></td>
                     <td>{{ .ProductSN }}</td>
                     <td>{{ if .WarehouseName }}{{ .WarehouseName }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .LocationName }}{{ .LocationName }}{{ else }}-{{ end }}</td>
                     <td>{{ .Quantity }}</td>
                     <td>{{ .ReturnedQuantity }}</td>
                     <td>{{ .PendingQuantity }}</td>
                 </tr>
                 {{ else }}
                 <tr>
-                    <td colspan="6" class="empty-tip">无商品明细</td>
+                    <td colspan="7" class="empty-tip">无商品明细</td>
                 </tr>
                 {{ end }}
                 </tbody>
             </table>
-
-            {{ if eq .order.Status 1 }}
-            <div class="detail-actions">
-                <form method="post" action="/borrows/return/{{ .order.ID }}" onsubmit="return confirm('确认将该借用单全部商品归还入库？')">
-                    <button type="submit" class="btn btn-primary">整单归还</button>
-                </form>
-            </div>
-            {{ end }}
         </div>
     </main>
 </div>

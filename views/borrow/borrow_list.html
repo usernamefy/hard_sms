@@ -39,7 +39,6 @@
                 <button type="submit" class="btn btn-ghost">搜索</button>
             </form>
             <div class="toolbar-actions">
-                <a class="btn btn-primary" href="/borrows/add">新建借用</a>
                 <a class="btn btn-outline" href="/">返回首页</a>
             </div>
         </div>
@@ -53,6 +52,7 @@
                     <th>商品名称</th>
                     <th>借用数量</th>
                     <th>条形码（SN）</th>
+                    <th>所在仓位</th>
                     <th>借用时间</th>
                     <th>预计归还时间</th>
                     <th>状态</th>
@@ -71,6 +71,9 @@
                     <td class="sn-cell">
                         {{ range .Items }}<div>{{ .ProductSN }}</div>{{ end }}
                     </td>
+                    <td class="sn-cell">
+                        {{ range .Items }}<div>{{ if .LocationName }}{{ .LocationName }}{{ else }}-{{ end }}</div>{{ end }}
+                    </td>
                     <td>{{ fmtDateTime .BorrowDate }}</td>
                     <td>{{ fmtDate .ExpectReturnDate }}</td>
                     <td>
@@ -88,7 +91,7 @@
                 </tr>
                 {{ else }}
                 <tr>
-                    <td colspan="9" class="empty-tip">暂无借用记录，点击右上角「新建借用」登记</td>
+                    <td colspan="10" class="empty-tip">暂无借用记录</td>
                 </tr>
                 {{ end }}
                 </tbody>

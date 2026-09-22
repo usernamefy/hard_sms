@@ -18,9 +18,6 @@ const (
 	BorrowOrderStatusReturned  = 2 // 已归还
 )
 
-// ErrBorrowAlreadyReturned 借用单已归还（重复归还）
-var ErrBorrowAlreadyReturned = errors.New("该借用单已归还")
-
 // BorrowOrder 借用单主表模型（映射 tbl_borrow_orders）
 type BorrowOrder struct {
 	ID               uint       `gorm:"primaryKey" json:"id"`
@@ -59,6 +56,7 @@ type BorrowItem struct {
 
 	PendingQuantity int    `gorm:"-" json:"pendingQuantity"` // 未归还数量（查询时填充）
 	WarehouseName   string `gorm:"-" json:"warehouseName"`   // 商品当前所在仓库（查询时填充）
+	LocationName    string `gorm:"-" json:"locationName"`    // 商品当前所在仓位（查询时填充）
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -225,25 +223,38 @@ func fillBorrowDisplay(db *gorm.DB, orders []BorrowOrder) {
 		return
 	}
 
-	// 明细行展示商品当前所在仓库（快照只存了名称与 SN，仓库取当前值）
+	// 明细行展示商品当前所在仓库与仓位（快照只存了名称与 SN，仓库仓位取当前值）
 	productIDs := make([]uint, 0, len(items))
 	for _, item := range items {
 		productIDs = appendUniqueID(productIDs, item.ProductID)
 	}
 	productWarehouse := make(map[uint]uint, len(productIDs))
+	productLocation := make(map[uint]uint, len(productIDs))
 	warehouseName := make(map[uint]string)
+	locationName := make(map[uint]string)
 	if len(productIDs) > 0 {
 		var products []Product
-		if err := db.Select("id", "warehouse_id").Where("id IN ?", productIDs).Find(&products).Error; err == nil {
+		if err := db.Select("id", "warehouse_id", "location_id").Where("id IN ?", productIDs).Find(&products).Error; err == nil {
 			warehouseIDs := make([]uint, 0, len(products))
+			locationIDs := make([]uint, 0, len(products))
 			for _, p := range products {
 				productWarehouse[p.ID] = p.WarehouseID
 				warehouseIDs = appendUniqueID(warehouseIDs, p.WarehouseID)
+				if p.LocationID != nil {
+					productLocation[p.ID] = *p.LocationID
+					locationIDs = appendUniqueID(locationIDs, *p.LocationID)
+				}
 			}
 			var warehouses []Warehouse
 			if err := db.Where("id IN ?", warehouseIDs).Find(&warehouses).Error; err == nil {
 				for _, w := range warehouses {
 					warehouseName[w.ID] = w.Name
+				}
+			}
+			var locations []Location
+			if err := db.Where("id IN ?", locationIDs).Find(&locations).Error; err == nil {
+				for _, l := range locations {
+					locationName[l.ID] = l.Name
 				}
 			}
 		}
@@ -259,6 +270,7 @@ func fillBorrowDisplay(db *gorm.DB, orders []BorrowOrder) {
 			}
 			item.PendingQuantity = item.Quantity - item.ReturnedQuantity
 			item.WarehouseName = warehouseName[productWarehouse[item.ProductID]]
+			item.LocationName = locationName[productLocation[item.ProductID]]
 			order.Items = append(order.Items, item)
 			order.ItemCount++
 			order.TotalQuantity += item.Quantity
@@ -327,45 +339,6 @@ func BorrowProductNames(orderID uint) []string {
 		names = append(names, item.ProductName)
 	}
 	return names
-}
-
-// ReturnBorrowOrder 整单归还：事务内将该单所有明细的已归还数量置为借用数量，
-// 单据置为已归还并记录归还时间；已归还单返回 ErrBorrowAlreadyReturned（幂等）
-func ReturnBorrowOrder(id uint) error {
-	return DB.Transaction(func(tx *gorm.DB) error {
-		// 行锁锁定借用单，防并发重复归还（Scan 不带行时主键为 0）
-		var order BorrowOrder
-		if err := tx.Raw("SELECT * FROM tbl_borrow_orders WHERE id = ? AND deleted_at IS NULL FOR UPDATE", id).
-			Scan(&order).Error; err != nil {
-			return err
-		}
-		if order.ID == 0 {
-			return gorm.ErrRecordNotFound
-		}
-		if order.Status != BorrowOrderStatusActive {
-			return ErrBorrowAlreadyReturned
-		}
-		if err := tx.Model(&BorrowItem{}).Where("order_id = ?", id).
-			Update("returned_quantity", gorm.Expr("quantity")).Error; err != nil {
-			return err
-		}
-		now := time.Now()
-		return tx.Model(&order).Updates(map[string]interface{}{
-			"status":             BorrowOrderStatusReturned,
-			"actual_return_date": now,
-		}).Error
-	})
-}
-
-// ActiveBorrowedTotal 全系统借用中单据的未归还数量合计（首页"借用中"统计）
-func ActiveBorrowedTotal() (int, error) {
-	var total int
-	err := DB.Table("tbl_borrow_items AS i").
-		Select("COALESCE(SUM(i.quantity - i.returned_quantity), 0)").
-		Joins("JOIN tbl_borrow_orders AS o ON o.id = i.order_id AND o.deleted_at IS NULL").
-		Where("o.status = ?", BorrowOrderStatusActive).
-		Scan(&total).Error
-	return total, err
 }
 
 // SearchBorrowableProducts 按商品名称/SKU 模糊搜索在库商品（新建借用搜索预览），含可借数量

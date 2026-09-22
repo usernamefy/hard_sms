@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"sms/models"
 )
@@ -41,6 +39,7 @@ type borrowRowView struct {
 	Name      string
 	SN        string
 	Warehouse string
+	Location  string
 	Available int
 	Quantity  int
 }
@@ -117,6 +116,7 @@ func (c *BorrowController) SearchProducts(ctx *gin.Context) {
 		SN        string `json:"sn"`
 		SKU       string `json:"sku"`
 		Warehouse string `json:"warehouse"`
+		Location  string `json:"location"`
 		Available int    `json:"available"`
 		Image     string `json:"image"`
 	}
@@ -133,6 +133,7 @@ func (c *BorrowController) SearchProducts(ctx *gin.Context) {
 			SN:        p.SN,
 			SKU:       p.SKU,
 			Warehouse: p.WarehouseName,
+			Location:  p.LocationName,
 			Available: p.InStockQty,
 			Image:     image,
 		})
@@ -213,29 +214,6 @@ func (c *BorrowController) Detail(ctx *gin.Context) {
 	}))
 }
 
-// Return 整单归还
-func (c *BorrowController) Return(ctx *gin.Context) {
-	id, _ := strconv.Atoi(ctx.Param("id"))
-	err := models.ReturnBorrowOrder(uint(id))
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		ctx.HTML(http.StatusNotFound, "error.html", gin.H{"msg": "借用单不存在"})
-		return
-	}
-	detailPath := "/borrows/" + ctx.Param("id")
-	if err != nil {
-		ctx.Redirect(http.StatusFound, detailPath+"?error="+err.Error())
-		return
-	}
-	if order, err := models.GetBorrowByID(uint(id)); err == nil {
-		names := make([]string, 0, len(order.Items))
-		for _, item := range order.Items {
-			names = append(names, item.ProductName)
-		}
-		recordOperation(ctx, "借用管理", "归还", "借用单「"+order.BorrowNo+"」整单归还", productNamesSummary(names))
-	}
-	ctx.Redirect(http.StatusFound, detailPath)
-}
-
 // parseBorrowInputs 解析并校验商品清单平行数组，返回数值化输入
 func parseBorrowInputs(form *borrowForm) ([]models.BorrowItemInput, string) {
 	if len(form.ProductIds) != len(form.Quantities) {
@@ -293,6 +271,7 @@ func (c *BorrowController) renderForm(ctx *gin.Context, action string, form borr
 			Name:      p.Name,
 			SN:        p.SN,
 			Warehouse: p.WarehouseName,
+			Location:  p.LocationName,
 			Available: p.InStockQty,
 			Quantity:  d.Quantity,
 		})

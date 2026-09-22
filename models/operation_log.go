@@ -69,10 +69,3 @@ func ListOperationLogs(q OperationLogQuery) ([]OperationLog, int64, error) {
 	}
 	return logs, total, nil
 }
-
-// CountProducts 商品总数（主页统计）
-func CountProducts() (int64, error) {
-	var total int64
-	err := DB.Model(&Product{}).Count(&total).Error
-	return total, err
-}
