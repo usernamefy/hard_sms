@@ -80,7 +80,8 @@ CREATE TABLE IF NOT EXISTS `tbl_products` (
   `warehouse_id` INT UNSIGNED NOT NULL COMMENT '所在仓库',
   `location_id`  INT UNSIGNED DEFAULT NULL COMMENT '所在仓位',
   `inbound_date` DATE         NOT NULL COMMENT '入库日期（系统自动）',
-  `quantity`     INT          NOT NULL DEFAULT 1 COMMENT '入库数量',
+  `quantity`     INT          NOT NULL DEFAULT 1 COMMENT '入库数量（当前库存口径）',
+  `in_stock_quantity` INT     NOT NULL DEFAULT 0 COMMENT '在库数量（借用扣减/归还回补）',
   `status`       INT          NOT NULL COMMENT '1 在库 / 2 已借出 / 0 已出库',
   `image`        VARCHAR(255) DEFAULT NULL COMMENT '商品图片路径',
   `remark`       VARCHAR(500) DEFAULT NULL,
@@ -179,4 +180,14 @@ CREATE TABLE IF NOT EXISTS `tbl_operation_logs` (
 -- 2026-09-21: 操作日志表增加商品名称快照列
 -- ALTER TABLE `tbl_operation_logs`
 --   ADD COLUMN `product_name` VARCHAR(200) DEFAULT NULL COMMENT '商品名称（快照，多个以、分隔）' AFTER `action`;
+-- 2026-09-22: 商品表增加在库数量列（借用扣减/归还回补），存量数据回填：在库 = 入库数量 - 借用中未归还
+-- ALTER TABLE `tbl_products`
+--   ADD COLUMN `in_stock_quantity` INT NOT NULL DEFAULT 0 COMMENT '在库数量（借用扣减/归还回补）' AFTER `quantity`;
+-- UPDATE `tbl_products` p
+--   SET p.`in_stock_quantity` = GREATEST(p.`quantity` - COALESCE((
+--         SELECT SUM(i.`quantity` - i.`returned_quantity`)
+--         FROM `tbl_borrow_items` i
+--         JOIN `tbl_borrow_orders` o ON o.`id` = i.`order_id` AND o.`deleted_at` IS NULL
+--         WHERE o.`status` = 1 AND i.`product_id` = p.`id`), 0), 0)
+--   WHERE p.`deleted_at` IS NULL;
 -- =============================================

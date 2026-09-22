@@ -44,7 +44,8 @@ type Product struct {
 	WarehouseID uint      `gorm:"not null;index" json:"warehouseId"`               // 所在仓库
 	LocationID  *uint     `gorm:"index" json:"locationId"`                         // 所在仓位，可空
 	InboundDate time.Time `gorm:"type:date;not null" json:"inboundDate"`           // 入库日期（系统自动）
-	Quantity    int       `gorm:"not null" json:"quantity"`                      // 入库数量
+	Quantity    int       `gorm:"not null" json:"quantity"`                      // 入库数量（当前库存口径）
+	InStockQuantity int   `gorm:"not null" json:"inStockQuantity"`               // 在库数量（借用扣减/归还回补，列 DEFAULT 0 需代码显式赋值）
 	Status      int       `json:"status"`                                        // 1 在库 / 2 已借出 / 0 已出库
 	Image       string    `gorm:"type:varchar(255)" json:"image"`                  // 商品图片相对路径
 	Remark      string    `gorm:"type:varchar(500)" json:"remark"`
@@ -56,9 +57,9 @@ type Product struct {
 	CreatedByName string `gorm:"-" json:"createdByName"`
 	AgeDays       int64  `gorm:"-" json:"ageDays"` // 库龄（天）= 当前日期 - 入库日期
 
-	// 借用流水口径（见 docs/借用管理技术方案.md 3.2）：由借用明细汇总
-	BorrowedQty int `gorm:"-" json:"borrowedQty"` // 已借出数量 = 借用中明细的未归还数量
-	InStockQty  int `gorm:"-" json:"inStockQty"`  // 在库/可借数量 = (status==1 ? quantity : 0) - 已借出数量
+	// 借用流水口径（查询时计算，不落库）
+	BorrowedQty int `gorm:"-" json:"borrowedQty"` // 已借出数量 = 入库数量 - 在库数量
+	InStockQty  int `gorm:"-" json:"inStockQty"`  // 在库/可借数量 = 在库数量（status==1 时有效，已出库为 0）
 
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
@@ -119,6 +120,9 @@ func CreateProduct(product *Product) error {
 					return err
 				}
 				product.SN = sn
+			}
+			if product.InStockQuantity == 0 {
+				product.InStockQuantity = product.Quantity
 			}
 			return tx.Create(product).Error
 		})
@@ -250,22 +254,16 @@ func fillProductDisplay(db *gorm.DB, products []Product) {
 		}
 	}
 
-	// 借用流水口径：已借出数量与在库数量由借用明细汇总（查询时计算，不落库）
-	productIDs := make([]uint, 0, len(products))
+	// 在库数量口径：已借出 = 入库数量 - 在库数量（在库数量为持久化字段，借用扣减/归还回补）
 	for i := range products {
-		productIDs = appendUniqueID(productIDs, products[i].ID)
-	}
-	if len(productIDs) > 0 {
-		borrowed := ActiveBorrowedQtyMap(db, productIDs)
-		for i := range products {
-			p := &products[i]
-			p.BorrowedQty = borrowed[p.ID]
-			if p.Status == ProductStatusInStock {
-				p.InStockQty = p.Quantity - p.BorrowedQty
-				if p.InStockQty < 0 {
-					p.InStockQty = 0
-				}
-			}
+		p := &products[i]
+		p.InStockQty = p.InStockQuantity
+		if p.Status != ProductStatusInStock {
+			p.InStockQty = 0
+		}
+		p.BorrowedQty = p.Quantity - p.InStockQuantity
+		if p.BorrowedQty < 0 {
+			p.BorrowedQty = 0
 		}
 	}
 }

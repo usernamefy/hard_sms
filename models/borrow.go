@@ -109,40 +109,6 @@ func mergeBorrowInputs(inputs []BorrowItemInput) []BorrowItemInput {
 	return merged
 }
 
-// activeBorrowedQtyFor 单个商品在借用中单据里的未归还数量合计
-func activeBorrowedQtyFor(db *gorm.DB, productID uint) int {
-	var qty int
-	db.Table("tbl_borrow_items AS i").
-		Select("COALESCE(SUM(i.quantity - i.returned_quantity), 0)").
-		Joins("JOIN tbl_borrow_orders AS o ON o.id = i.order_id AND o.deleted_at IS NULL").
-		Where("o.status = ? AND i.product_id = ?", BorrowOrderStatusActive, productID).
-		Scan(&qty)
-	return qty
-}
-
-// ActiveBorrowedQtyMap 批量查询多个商品的未归还借用数量，返回 productID -> 数量
-func ActiveBorrowedQtyMap(db *gorm.DB, productIDs []uint) map[uint]int {
-	result := make(map[uint]int, len(productIDs))
-	if len(productIDs) == 0 {
-		return result
-	}
-	type row struct {
-		ProductID uint
-		Qty       int
-	}
-	var rows []row
-	db.Table("tbl_borrow_items AS i").
-		Select("i.product_id AS product_id, COALESCE(SUM(i.quantity - i.returned_quantity), 0) AS qty").
-		Joins("JOIN tbl_borrow_orders AS o ON o.id = i.order_id AND o.deleted_at IS NULL").
-		Where("o.status = ? AND i.product_id IN ?", BorrowOrderStatusActive, productIDs).
-		Group("i.product_id").
-		Scan(&rows)
-	for _, r := range rows {
-		result[r.ProductID] = r.Qty
-	}
-	return result
-}
-
 // CreateBorrowOrder 创建借用单：同商品多行先合并，事务内逐行锁定商品并校验可借数量，
 // 借用单号冲突（唯一索引 1062）时事务内重取序号重试，最多 3 次
 func CreateBorrowOrder(order *BorrowOrder, inputs []BorrowItemInput) error {
@@ -158,6 +124,7 @@ func CreateBorrowOrder(order *BorrowOrder, inputs []BorrowItemInput) error {
 			order.BorrowNo = no
 
 			items := make([]BorrowItem, 0, len(merged))
+			decrement := make(map[uint]int, len(merged))
 			for _, in := range merged {
 				// 行锁锁定商品行，防止并发借用超卖（Scan 不带行时主键为 0）
 				var product Product
@@ -171,13 +138,14 @@ func CreateBorrowOrder(order *BorrowOrder, inputs []BorrowItemInput) error {
 				if product.Status != ProductStatusInStock {
 					return fmt.Errorf("「%s」当前不在库，无法借用", product.Name)
 				}
-				available := product.Quantity - activeBorrowedQtyFor(tx, product.ID)
+				available := product.InStockQuantity
 				if available < 0 {
 					available = 0
 				}
 				if in.Quantity > available {
 					return fmt.Errorf("「%s」借用数量超过可借数量（可借 %d）", product.Name, available)
 				}
+				decrement[in.ProductID] += in.Quantity
 				items = append(items, BorrowItem{
 					ProductID:   product.ID,
 					ProductName: product.Name,
@@ -193,7 +161,17 @@ func CreateBorrowOrder(order *BorrowOrder, inputs []BorrowItemInput) error {
 			for i := range items {
 				items[i].OrderID = order.ID
 			}
-			return tx.Create(&items).Error
+			if err := tx.Create(&items).Error; err != nil {
+				return err
+			}
+			// 扣减商品在库数量（借出）
+			for pid, qty := range decrement {
+				if err := tx.Model(&Product{ID: pid}).
+					Update("in_stock_quantity", gorm.Expr("in_stock_quantity - ?", qty)).Error; err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 		if err == nil {
 			return nil

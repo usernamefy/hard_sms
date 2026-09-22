@@ -111,6 +111,23 @@ func CreateReturnOrder(order *ReturnOrder) error {
 				Update("returned_quantity", gorm.Expr("returned_quantity + ?", order.Quantity)).Error; err != nil {
 				return err
 			}
+
+			// 回补商品在库数量（行锁防并发，校验不超出入库数量）
+			var product Product
+			if err := tx.Raw("SELECT id, name, quantity, in_stock_quantity FROM tbl_products WHERE id = ? FOR UPDATE", item.ProductID).
+				Scan(&product).Error; err != nil {
+				return err
+			}
+			if product.ID != 0 {
+				if product.InStockQuantity+order.Quantity > product.Quantity {
+					return fmt.Errorf("「%s」在库数量将超出入库数量，请核对库存", product.Name)
+				}
+				if err := tx.Model(&Product{ID: product.ID}).
+					Update("in_stock_quantity", gorm.Expr("in_stock_quantity + ?", order.Quantity)).Error; err != nil {
+					return err
+				}
+			}
+
 			// 全部还清则借用单转为已归还
 			var remain int
 			if err := tx.Model(&BorrowItem{}).Where("order_id = ?", borrow.ID).
