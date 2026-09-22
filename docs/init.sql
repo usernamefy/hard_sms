@@ -135,7 +135,31 @@ CREATE TABLE IF NOT EXISTS `tbl_borrow_items` (
   KEY `idx_tbl_borrow_items_product` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='借用明细表';
 
--- 8. 操作日志表
+-- 8. 归还单表（一次归还操作一条记录）
+CREATE TABLE IF NOT EXISTS `tbl_return_orders` (
+  `id`                  INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `return_no`           VARCHAR(50)   NOT NULL COMMENT '归还单号（自动生成 RT+日期+序号，唯一）',
+  `borrow_order_id`     INT UNSIGNED  NOT NULL COMMENT '借用单，关联 tbl_borrow_orders.id',
+  `borrow_item_id`      INT UNSIGNED  NOT NULL COMMENT '借用明细，关联 tbl_borrow_items.id',
+  `product_id`          INT UNSIGNED  NOT NULL COMMENT '商品，关联 tbl_products.id',
+  `product_name`        VARCHAR(100)  NOT NULL COMMENT '商品名称快照',
+  `product_sn`          VARCHAR(50)   NOT NULL COMMENT 'SN 快照',
+  `quantity`            INT           NOT NULL COMMENT '归还数量',
+  `is_lost`             INT           NOT NULL DEFAULT 0 COMMENT '是否商品丢失：1 是 0 否',
+  `compensation_amount` DECIMAL(10,2) DEFAULT NULL COMMENT '赔偿金额（丢失时填写）',
+  `remark`              VARCHAR(500)  DEFAULT NULL,
+  `returned_by_id`      INT UNSIGNED  DEFAULT NULL COMMENT '归还操作人，关联 tbl_users.id',
+  `returned_by_name`    VARCHAR(50)   DEFAULT NULL COMMENT '归还操作人展示名（快照）',
+  `created_at`          DATETIME      DEFAULT NULL COMMENT '归还时间',
+  `updated_at`          DATETIME      DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tbl_return_orders_no` (`return_no`),
+  KEY `idx_tbl_return_orders_borrow` (`borrow_order_id`),
+  KEY `idx_tbl_return_orders_item` (`borrow_item_id`),
+  KEY `idx_tbl_return_orders_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='归还单表';
+
+-- 9. 操作日志表
 CREATE TABLE IF NOT EXISTS `tbl_operation_logs` (
   `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id`      INT UNSIGNED DEFAULT NULL COMMENT '操作人，关联 tbl_users.id',

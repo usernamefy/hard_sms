@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260922-3">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item active" href="/">主页</a>
+            <a class="menu-item" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="/borrows">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="/logs">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>新增归还</h2>
+                <p>搜索借用中的商品并登记归还数量，提交后创建归还单</p>
+            </div>
+            <a class="btn btn-outline" href="/">返回首页</a>
+        </div>
+
+        <div class="card form-card form-card-wide">
+            {{ if .error }}
+            <div class="login-alert">{{ .error }}</div>
+            {{ end }}
+            {{ if gt .doneQty 0 }}
+            <div class="login-alert login-alert-success">归还成功：归还单「{{ .doneNo }}」共归还 {{ .doneQty }} 件</div>
+            {{ end }}
+
+            <div class="card-title">归还信息</div>
+            <form method="post" action="/borrows/return" class="admin-form" id="returnForm">
+                <div class="form-item">
+                    <label for="returnNo">归还单号</label>
+                    <input type="text" id="returnNo" value="{{ .returnNo }}" readonly>
+                </div>
+
+                <div class="form-item form-item--full">
+                    <label for="itemSearch">商品搜索 <em>*</em></label>
+                    <div class="borrow-search">
+                        <input type="text" id="itemSearch" placeholder="输入 SN 码，回车搜索" autocomplete="off" autofocus>
+                        <button type="button" class="btn btn-ghost" id="btnSearch">搜索</button>
+                    </div>
+                    <div id="searchResults" class="product-card-list"></div>
+                    <p class="form-hint">搜索借用中的商品并选择，将自动带出对应借用信息</p>
+                </div>
+
+                <input type="hidden" name="itemId" id="itemId" value="{{ if .selected }}{{ .selected.ItemID }}{{ end }}">
+
+                <div class="form-item form-item--full">
+                    <div class="borrow-info-panel" id="borrowInfo" {{ if not .selected }}hidden{{ end }}>
+                        <div class="borrow-info-grid">
+                            <div>
+                                <div class="borrow-info-label">借用单号</div>
+                                <div class="borrow-info-value" id="infoBorrowNo">{{ if .selected }}{{ .selected.BorrowNo }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">商品名称</div>
+                                <div class="borrow-info-value" id="infoProductName">{{ if .selected }}{{ .selected.ProductName }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">借用人</div>
+                                <div class="borrow-info-value" id="infoBorrower">{{ if .selected }}{{ .selected.BorrowerName }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">借用时间</div>
+                                <div class="borrow-info-value" id="infoBorrowDate">{{ if .selected }}{{ fmtDateTime .selected.BorrowDate }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">预计归还时间</div>
+                                <div class="borrow-info-value" id="infoExpectReturn">{{ if .selected }}{{ fmtDate .selected.ExpectReturnDate }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">超期状态</div>
+                                <div class="borrow-info-value" id="infoOverdue">{{ if .selected }}{{ if gt .selected.OverdueDays 0 }}<span class="overdue-warning">已超期 {{ .selected.OverdueDays }} 天</span>{{ else }}未超期{{ end }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">借用数量</div>
+                                <div class="borrow-info-value" id="infoBorrowQty">{{ if .selected }}{{ .selected.BorrowQty }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">已归还数量</div>
+                                <div class="borrow-info-value" id="infoReturnedQty">{{ if .selected }}{{ .selected.ReturnedQty }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">可归还数量</div>
+                                <div class="borrow-info-value" id="infoPendingQty">{{ if .selected }}{{ .selected.PendingQty }}{{ else }}-{{ end }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label for="returnQuantity">归还数量 <em>*</em></label>
+                    <input type="number" id="returnQuantity" name="returnQuantity" class="qty-input" min="1" step="1" required
+                           {{ if .selected }}value="{{ if ne .form.ReturnQuantity "" }}{{ .form.ReturnQuantity }}{{ else }}{{ .selected.PendingQty }}{{ end }}" data-pending="{{ .selected.PendingQty }}"{{ else }}value="{{ .form.ReturnQuantity }}" data-pending="0"{{ end }}>
+                    <p class="form-hint">归还数量需在 1 ~ 可归还数量 之间</p>
+                </div>
+
+                <div class="form-item">
+                    <label for="returnTime">归还时间</label>
+                    <input type="datetime-local" id="returnTime" value="{{ .today }}" readonly>
+                </div>
+
+                <div class="form-item form-item--full">
+                    <label class="form-checkbox-line">
+                        <input type="checkbox" id="isLost" name="isLost" value="1" {{ if eq .form.IsLost "1" }}checked{{ end }}>
+                        <span>商品丢失</span>
+                    </label>
+                    <div id="lostFields" class="lost-fields" {{ if not (eq .form.IsLost "1") }}hidden{{ end }}>
+                        <label for="compensationAmount">赔偿金额 <em>*</em></label>
+                        <input type="number" id="compensationAmount" name="compensationAmount" min="0" step="0.01" placeholder="请输入赔偿金额" value="{{ .form.CompensationAmount }}">
+                    </div>
+                </div>
+
+                <div class="form-item form-item--full">
+                    <label for="remark">备注</label>
+                    <textarea id="remark" name="remark" maxlength="500" placeholder="请输入备注信息（可选）">{{ .form.Remark }}</textarea>
+                </div>
+
+                <div class="form-actions">
+                    <a class="btn btn-outline" href="/borrows">取消</a>
+                    <button type="submit" class="btn btn-primary">确认归还</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+(function () {
+    var searchInput = document.getElementById('itemSearch');
+    var searchBtn = document.getElementById('btnSearch');
+    var resultBox = document.getElementById('searchResults');
+    var form = document.getElementById('returnForm');
+    var itemIdInput = document.getElementById('itemId');
+    var qtyInput = document.getElementById('returnQuantity');
+    var infoBox = document.getElementById('borrowInfo');
+    var isLost = document.getElementById('isLost');
+    var lostFields = document.getElementById('lostFields');
+    var compensation = document.getElementById('compensationAmount');
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    // ISO 时间转 YYYY-MM-DD HH:MM
+    function fmtDT(s) {
+        if (!s) return '-';
+        return String(s).replace('T', ' ').slice(0, 16);
+    }
+
+    function fmtDate(s) {
+        if (!s) return '-';
+        return String(s).slice(0, 10);
+    }
+
+    function setText(id, text) {
+        document.getElementById(id).textContent = text;
+    }
+
+    function updateQtyState() {
+        var pending = Number(qtyInput.dataset.pending || 0);
+        var v = parseInt(qtyInput.value, 10);
+        var bad = isNaN(v) || v < 1 || v > pending;
+        qtyInput.classList.toggle('qty-error', bad);
+        return !bad;
+    }
+    qtyInput.addEventListener('input', updateQtyState);
+
+    // 选中商品：带出借用信息并设置归还数量
+    function selectItem(item) {
+        itemIdInput.value = item.itemId;
+        setText('infoBorrowNo', item.borrowNo || '-');
+        setText('infoProductName', item.productName || '-');
+        setText('infoBorrower', item.borrowerName || '-');
+        setText('infoBorrowDate', fmtDT(item.borrowDate));
+        setText('infoExpectReturn', fmtDate(item.expectReturnDate));
+        setText('infoBorrowQty', item.borrowQty);
+        setText('infoReturnedQty', item.returnedQty);
+        setText('infoPendingQty', item.pendingQty);
+        var overdue = document.getElementById('infoOverdue');
+        if (item.overdueDays > 0) {
+            overdue.innerHTML = '<span class="overdue-warning">已超期 ' + item.overdueDays + ' 天</span>';
+        } else {
+            overdue.textContent = '未超期';
+        }
+        qtyInput.dataset.pending = item.pendingQty;
+        qtyInput.max = item.pendingQty;
+        qtyInput.value = item.pendingQty;
+        updateQtyState();
+        infoBox.hidden = false;
+        resultBox.innerHTML = '';
+    }
+
+    function renderResults(list) {
+        resultBox.innerHTML = '';
+        if (!list || !list.length) {
+            var tip = document.createElement('div');
+            tip.className = 'search-empty';
+            tip.textContent = '未找到借用中的商品';
+            resultBox.appendChild(tip);
+            return;
+        }
+        list.forEach(function (item) {
+            var card = document.createElement('div');
+            card.className = 'product-card';
+            var sub = 'SN 码：' + esc(item.productSn) + ' · 借用单号：' + esc(item.borrowNo);
+            var sub2 = '借用人：' + esc(item.borrowerName) + ' · 可归还：' + item.pendingQty;
+            card.innerHTML =
+                '<div class="product-thumb">🔍</div>' +
+                '<div class="product-info">' +
+                '<div class="product-name">' + esc(item.productName) + '</div>' +
+                '<div class="product-sub">' + sub + '</div>' +
+                '<div class="product-sub">' + sub2 + '</div>' +
+                '</div>' +
+                '<div class="product-side">' +
+                '<button type="button" class="btn btn-primary btn-sm pick-item">选择</button>' +
+                '</div>';
+            card.querySelector('.pick-item').addEventListener('click', function () {
+                selectItem(item);
+            });
+            resultBox.appendChild(card);
+        });
+    }
+
+    function doSearch() {
+        var q = searchInput.value.trim();
+        if (!q) return;
+        searchBtn.disabled = true;
+        fetch('/borrows/api/returnables?q=' + encodeURIComponent(q))
+            .then(function (res) { return res.json(); })
+            .then(function (data) { renderResults(data.items || []); })
+            .catch(function () { renderResults([]); })
+            .finally(function () { searchBtn.disabled = false; });
+    }
+
+    searchBtn.addEventListener('click', doSearch);
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            doSearch();
+        }
+    });
+
+    // 商品丢失：联动赔偿金额
+    function syncLostFields() {
+        lostFields.hidden = !isLost.checked;
+        compensation.required = isLost.checked;
+        if (!isLost.checked) {
+            compensation.value = '';
+        }
+    }
+    isLost.addEventListener('change', syncLostFields);
+    syncLostFields();
+
+    // 提交前校验（服务端事务内还会行锁重验）
+    form.addEventListener('submit', function (e) {
+        if (!itemIdInput.value) {
+            e.preventDefault();
+            alert('请先搜索并选择要归还的商品');
+            return;
+        }
+        if (!updateQtyState()) {
+            e.preventDefault();
+            alert('归还数量需在 1 ~ 可归还数量 之间');
+            return;
+        }
+        if (isLost.checked && compensation.value === '') {
+            e.preventDefault();
+            alert('商品丢失时，必须填写赔偿金额');
+        }
+    });
+})();
+</script>
+</body>
+</html>

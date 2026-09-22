@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20260921-10">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260922-1">
 </head>
 <body class="admin-body">
 {{ template "topbar" . }}
@@ -85,7 +85,7 @@
         <div class="card card-gap-top">
             <div class="card-head">
                 <div class="card-title">商品明细</div>
-                <span class="pager-info">共 {{ .order.ItemCount }} 种商品，借用 {{ .order.TotalQuantity }} 件</span>
+                <span class="pager-info">共 {{ .order.ItemCount }} 种商品，借用 {{ .order.TotalQuantity }} 件{{ if eq .order.Status 1 }}，未归还 {{ .order.PendingQty }} 件{{ end }}</span>
             </div>
             <table class="data-table">
                 <thead>

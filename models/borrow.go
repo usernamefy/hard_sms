@@ -341,6 +341,138 @@ func BorrowProductNames(orderID uint) []string {
 	return names
 }
 
+// BorrowReturnItem 可归还明细行（借用中且有未归还数量），供归还页搜索与选中回显
+type BorrowReturnItem struct {
+	ItemID           uint      `json:"itemId"`
+	OrderID          uint      `json:"orderId"`
+	ProductID        uint      `json:"-"`
+	BorrowNo         string    `json:"borrowNo"`
+	BorrowerName     string    `json:"borrowerName"`
+	ProductName      string    `json:"productName"`
+	ProductSN        string    `json:"productSn"`
+	BorrowDate       time.Time `json:"borrowDate"`       // 借用时间
+	ExpectReturnDate time.Time `json:"expectReturnDate"` // 预计归还时间
+	BorrowQty        int       `json:"borrowQty"`        // 借用数量
+	ReturnedQty      int       `json:"returnedQty"`      // 已归还数量
+	PendingQty       int       `json:"pendingQty"`       // 可归还数量
+	OverdueDays      int       `json:"overdueDays"`      // 已超期天数（0 表示未超期）
+	WarehouseName    string    `json:"warehouseName"`    // 商品当前所在仓库（查询时填充）
+	LocationName     string    `json:"locationName"`     // 商品当前所在仓位（查询时填充）
+}
+
+// SearchReturnableItems 按 SN 码模糊搜索借用中且有未归还数量的明细
+func SearchReturnableItems(keyword string, limit int) ([]BorrowReturnItem, error) {
+	db := DB.Table("tbl_borrow_items AS i").
+		Select("i.id AS item_id, i.order_id AS order_id, i.product_id AS product_id, "+
+			"o.borrow_no AS borrow_no, o.borrower_name AS borrower_name, "+
+			"o.borrow_date AS borrow_date, o.expect_return_date AS expect_return_date, "+
+			"i.product_name AS product_name, i.product_sn AS product_sn, "+
+			"i.quantity AS borrow_qty, i.returned_quantity AS returned_qty, "+
+			"(i.quantity - i.returned_quantity) AS pending_qty").
+		Joins("JOIN tbl_borrow_orders AS o ON o.id = i.order_id AND o.deleted_at IS NULL").
+		Where("o.status = ? AND i.quantity > i.returned_quantity", BorrowOrderStatusActive)
+	if kw := strings.TrimSpace(keyword); kw != "" {
+		db = db.Where("i.product_sn LIKE ?", "%"+kw+"%")
+	}
+	if limit < 1 || limit > 50 {
+		limit = 10
+	}
+	var items []BorrowReturnItem
+	if err := db.Order("i.id DESC").Limit(limit).Scan(&items).Error; err != nil {
+		return nil, err
+	}
+	fillReturnItemOverdue(items)
+	fillReturnItemLocation(DB, items)
+	return items, nil
+}
+
+// GetReturnItemByID 按明细 ID 查询单条归还清单行（校验失败回显用），不限制单据状态
+func GetReturnItemByID(itemID uint) (*BorrowReturnItem, error) {
+	var items []BorrowReturnItem
+	if err := DB.Table("tbl_borrow_items AS i").
+		Select("i.id AS item_id, i.order_id AS order_id, i.product_id AS product_id, "+
+			"o.borrow_no AS borrow_no, o.borrower_name AS borrower_name, "+
+			"o.borrow_date AS borrow_date, o.expect_return_date AS expect_return_date, "+
+			"i.product_name AS product_name, i.product_sn AS product_sn, "+
+			"i.quantity AS borrow_qty, i.returned_quantity AS returned_qty, "+
+			"(i.quantity - i.returned_quantity) AS pending_qty").
+		Joins("JOIN tbl_borrow_orders AS o ON o.id = i.order_id AND o.deleted_at IS NULL").
+		Where("i.id = ?", itemID).
+		Scan(&items).Error; err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, errors.New("借用明细不存在")
+	}
+	fillReturnItemOverdue(items)
+	fillReturnItemLocation(DB, items)
+	return &items[0], nil
+}
+
+// fillReturnItemOverdue 按预计归还时间计算超期天数（查询时计算，不落库）
+func fillReturnItemOverdue(items []BorrowReturnItem) {
+	now := time.Now()
+	for i := range items {
+		expect := items[i].ExpectReturnDate
+		if !expect.IsZero() && now.After(expect) {
+			items[i].OverdueDays = int(now.Sub(expect).Hours() / 24)
+		}
+	}
+}
+
+// fillReturnItemLocation 批量填充归还明细行的商品当前仓库与仓位名称（查询时计算，不落库）
+func fillReturnItemLocation(db *gorm.DB, items []BorrowReturnItem) {
+	if len(items) == 0 {
+		return
+	}
+	productIDs := make([]uint, 0, len(items))
+	for _, item := range items {
+		productIDs = appendUniqueID(productIDs, item.ProductID)
+	}
+	if len(productIDs) == 0 {
+		return
+	}
+
+	var products []Product
+	if err := db.Select("id", "warehouse_id", "location_id").Where("id IN ?", productIDs).Find(&products).Error; err != nil {
+		return
+	}
+	productWarehouse := make(map[uint]uint, len(products))
+	productLocation := make(map[uint]uint, len(products))
+	warehouseIDs := make([]uint, 0, len(products))
+	locationIDs := make([]uint, 0, len(products))
+	for _, p := range products {
+		productWarehouse[p.ID] = p.WarehouseID
+		warehouseIDs = appendUniqueID(warehouseIDs, p.WarehouseID)
+		if p.LocationID != nil {
+			productLocation[p.ID] = *p.LocationID
+			locationIDs = appendUniqueID(locationIDs, *p.LocationID)
+		}
+	}
+	warehouseName := make(map[uint]string, len(warehouseIDs))
+	if len(warehouseIDs) > 0 {
+		var warehouses []Warehouse
+		if err := db.Where("id IN ?", warehouseIDs).Find(&warehouses).Error; err == nil {
+			for _, w := range warehouses {
+				warehouseName[w.ID] = w.Name
+			}
+		}
+	}
+	locationName := make(map[uint]string, len(locationIDs))
+	if len(locationIDs) > 0 {
+		var locations []Location
+		if err := db.Where("id IN ?", locationIDs).Find(&locations).Error; err == nil {
+			for _, l := range locations {
+				locationName[l.ID] = l.Name
+			}
+		}
+	}
+	for i := range items {
+		items[i].WarehouseName = warehouseName[productWarehouse[items[i].ProductID]]
+		items[i].LocationName = locationName[productLocation[items[i].ProductID]]
+	}
+}
+
 // SearchBorrowableProducts 按商品名称/SKU 模糊搜索在库商品（新建借用搜索预览），含可借数量
 func SearchBorrowableProducts(keyword string, limit int) ([]Product, error) {
 	db := DB.Where("status = ?", ProductStatusInStock)

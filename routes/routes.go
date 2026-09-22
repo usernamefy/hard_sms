@@ -142,6 +142,11 @@ func Setup() *gin.Engine {
 		admin.GET("/borrows/api/products", controllers.BorrowCtl.SearchProducts)
 		admin.GET("/borrows/:id", controllers.BorrowCtl.Detail)
 
+		// 归还：独立页面（首页快捷操作进入），跨借用单归还
+		admin.GET("/borrows/return", controllers.BorrowCtl.Return)
+		admin.POST("/borrows/return", controllers.BorrowCtl.DoReturn)
+		admin.GET("/borrows/api/returnables", controllers.BorrowCtl.SearchReturnables)
+
 		// 操作日志
 		admin.GET("/logs", controllers.OperationLogCtl.List)
 

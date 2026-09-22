@@ -74,6 +74,54 @@ a {
     text-align: center;
 }
 
+.login-alert-success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #16a34a;
+}
+
+/* 归还页借用信息面板 */
+.borrow-info-panel {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+.borrow-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 18px;
+}
+
+.borrow-info-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 2px;
+}
+
+.borrow-info-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: #111827;
+    word-break: break-all;
+}
+
+.overdue-warning {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.lost-fields {
+    margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+    .borrow-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .form-item {
     margin-bottom: 18px;
 }

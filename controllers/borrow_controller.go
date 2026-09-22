@@ -214,6 +214,133 @@ func (c *BorrowController) Detail(ctx *gin.Context) {
 	}))
 }
 
+// returnForm 归还表单：搜索商品选中一条借用明细后登记归还
+type returnForm struct {
+	ItemID             string `form:"itemId"`             // 选中的借用明细 ID
+	ReturnQuantity     string `form:"returnQuantity"`     // 归还数量
+	IsLost             string `form:"isLost"`             // 商品丢失：勾选时为 "1"
+	CompensationAmount string `form:"compensationAmount"` // 赔偿金额（丢失时必填）
+	Remark             string `form:"remark"`
+}
+
+// Return 渲染归还页：预生成候选归还单号，搜索商品选中借用明细后提交
+func (c *BorrowController) Return(ctx *gin.Context) {
+	returnNo, err := models.GenerateReturnNo()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "生成归还单号失败"})
+		return
+	}
+	doneQty, _ := strconv.Atoi(ctx.DefaultQuery("done", "0"))
+	c.renderReturn(ctx, nil, returnForm{}, "", returnNo, doneQty, ctx.Query("no"))
+}
+
+// SearchReturnables 归还商品搜索接口（JSON）：按借用单号/借用人/商品名称/SN
+// 模糊搜索借用中且有未归还数量的明细，带回借用信息与超期天数
+func (c *BorrowController) SearchReturnables(ctx *gin.Context) {
+	items, err := models.SearchReturnableItems(ctx.Query("q"), 10)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "搜索可归还商品失败"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+// DoReturn 处理归还提交：创建归还单，累加借用明细已归还数量，整单还清自动转为已归还
+func (c *BorrowController) DoReturn(ctx *gin.Context) {
+	var form returnForm
+	fail := func(msg string) {
+		var selected *models.BorrowReturnItem
+		if id, err := strconv.ParseUint(strings.TrimSpace(form.ItemID), 10, 64); err == nil && id > 0 {
+			selected, _ = models.GetReturnItemByID(uint(id))
+		}
+		returnNo, _ := models.GenerateReturnNo()
+		c.renderReturn(ctx, selected, form, msg, returnNo, 0, "")
+	}
+	if err := ctx.ShouldBind(&form); err != nil {
+		fail("归还失败：表单数据不完整，请重新提交")
+		return
+	}
+	itemID, err := strconv.ParseUint(strings.TrimSpace(form.ItemID), 10, 64)
+	if err != nil || itemID == 0 {
+		fail("归还失败：请先搜索并选择要归还的商品")
+		return
+	}
+	quantity, err := strconv.Atoi(strings.TrimSpace(form.ReturnQuantity))
+	if err != nil || quantity < 1 {
+		fail("归还失败：归还数量需为不小于 1 的整数")
+		return
+	}
+	isLost := strings.TrimSpace(form.IsLost) == "1"
+	var compensation *float64
+	if isLost {
+		raw := strings.TrimSpace(form.CompensationAmount)
+		amount, perr := strconv.ParseFloat(raw, 64)
+		if raw == "" || perr != nil || amount < 0 {
+			fail("归还失败：商品丢失时需填写不小于 0 的赔偿金额")
+			return
+		}
+		compensation = &amount
+	}
+
+	// 归还操作人固定取当前登录用户，不信任表单数据
+	session := sessions.Default(ctx)
+	operatorID, _ := session.Get("user_id").(uint)
+	operatorName := ""
+	if realname, ok := session.Get("realname").(string); ok && realname != "" {
+		operatorName = realname
+	} else if username, ok := session.Get("username").(string); ok {
+		operatorName = username
+	}
+	if operatorID == 0 {
+		fail("登录状态已失效，请重新登录")
+		return
+	}
+
+	order := &models.ReturnOrder{
+		BorrowItemID:       uint(itemID),
+		Quantity:           quantity,
+		IsLost:             lostInt(isLost),
+		CompensationAmount: compensation,
+		Remark:             strings.TrimSpace(form.Remark),
+		ReturnedByID:       operatorID,
+		ReturnedByName:     operatorName,
+	}
+	if err := models.CreateReturnOrder(order); err != nil {
+		fail("归还失败：" + err.Error())
+		return
+	}
+
+	detail := "新建归还单「" + order.ReturnNo + "」，商品「" + order.ProductName + "」归还 " + strconv.Itoa(order.Quantity) + " 件"
+	if isLost {
+		detail += "，商品丢失，赔偿金额 " + strconv.FormatFloat(*compensation, 'f', 2, 64) + " 元"
+	}
+	recordOperation(ctx, "借用管理", "归还", detail, order.ProductName)
+	ctx.Redirect(http.StatusFound, "/borrows/return?done="+strconv.Itoa(order.Quantity)+"&no="+order.ReturnNo)
+}
+
+// lostInt 布尔转归还单丢失标记
+func lostInt(isLost bool) int {
+	if isLost {
+		return 1
+	}
+	return 0
+}
+
+// renderReturn 渲染归还页；selected 为校验失败回显时已选中的借用明细，
+// form 为回显的表单值；doneQty/doneNo 大于 0 时展示归还成功提示
+func (c *BorrowController) renderReturn(ctx *gin.Context, selected *models.BorrowReturnItem, form returnForm, errMsg, returnNo string, doneQty int, doneNo string) {
+	ctx.HTML(http.StatusOK, "borrow_return.html", userPageData(ctx, gin.H{
+		"title":     "新增归还 - 库存管理系统",
+		"returnNo":  returnNo,
+		"today":     time.Now().Format("2006-01-02T15:04"),
+		"selected":  selected,
+		"form":      form,
+		"error":     errMsg,
+		"doneQty":   doneQty,
+		"doneNo":    doneNo,
+	}))
+}
+
 // parseBorrowInputs 解析并校验商品清单平行数组，返回数值化输入
 func parseBorrowInputs(form *borrowForm) ([]models.BorrowItemInput, string) {
 	if len(form.ProductIds) != len(form.Quantities) {
