@@ -24,11 +24,12 @@ type loginForm struct {
 }
 
 type userForm struct {
-	Username string `form:"username" binding:"required"`
-	Password string `form:"password"`
-	RealName string `form:"realName"`
-	Role     string `form:"role"`
-	Status   int    `form:"status"`
+	Username    string `form:"username" binding:"required"`
+	Password    string `form:"password"`
+	RealName    string `form:"realName"`
+	DepartmentID uint  `form:"departmentId"`
+	Role        string `form:"role"`
+	Status      int    `form:"status"`
 }
 
 // ==================== 登录相关 ====================
@@ -126,15 +127,36 @@ func (c *UserController) List(ctx *gin.Context) {
 	}))
 }
 
+// renderUserForm 渲染用户新增/编辑表单（加载启用部门下拉）
+func (c *UserController) renderUserForm(ctx *gin.Context, title, action string, user *models.User, isEdit bool, errMsg string) {
+	departments, err := models.ListEnabledDepartments()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "加载部门列表失败"})
+		return
+	}
+	ctx.HTML(http.StatusOK, "user_form.html", userPageData(ctx, gin.H{
+		"title":       title,
+		"action":      action,
+		"user":        user,
+		"isEdit":      isEdit,
+		"departments": departments,
+		"error":       errMsg,
+	}))
+}
+
+// validateDepartmentID 部门下拉值校验：0 表示未设置，其余必须为启用中的部门
+func validateDepartmentID(id uint) bool {
+	if id == 0 {
+		return true
+	}
+	department, err := models.GetDepartmentByID(id)
+	return err == nil && department.Status == 1
+}
+
 // Add 渲染新增用户页
 func (c *UserController) Add(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "user_form.html", userPageData(ctx, gin.H{
-		"title":  "新增用户 - 库存管理系统",
-		"action": "/users/add",
-		"user":   models.User{Status: 1, Role: "admin"},
-		"isEdit": false,
-		"error":  ctx.Query("error"),
-	}))
+	c.renderUserForm(ctx, "新增用户 - 库存管理系统", "/users/add",
+		&models.User{Status: 1, Role: "admin"}, false, ctx.Query("error"))
 }
 
 // DoAdd 处理新增用户提交
@@ -156,12 +178,17 @@ func (c *UserController) DoAdd(ctx *gin.Context) {
 	if form.Role == "" {
 		form.Role = "admin"
 	}
+	if !validateDepartmentID(form.DepartmentID) {
+		ctx.Redirect(http.StatusFound, "/users/add?error=所选部门不存在或已禁用")
+		return
+	}
 	user := &models.User{
-		Username: form.Username,
-		Password: utils.Md5(form.Password),
-		RealName: form.RealName,
-		Role:     form.Role,
-		Status:   form.Status,
+		Username:     form.Username,
+		Password:     utils.Md5(form.Password),
+		RealName:     form.RealName,
+		DepartmentID: form.DepartmentID,
+		Role:         form.Role,
+		Status:       form.Status,
 	}
 	if err := models.CreateUser(user); err != nil {
 		ctx.Redirect(http.StatusFound, "/users/add?error=创建失败："+err.Error())
@@ -178,13 +205,7 @@ func (c *UserController) Edit(ctx *gin.Context) {
 		ctx.HTML(http.StatusNotFound, "error.html", gin.H{"msg": "用户不存在"})
 		return
 	}
-	ctx.HTML(http.StatusOK, "user_form.html", userPageData(ctx, gin.H{
-		"title":  "编辑用户 - 库存管理系统",
-		"action": "/users/edit/" + ctx.Param("id"),
-		"user":   user,
-		"isEdit": true,
-		"error":  ctx.Query("error"),
-	}))
+	c.renderUserForm(ctx, "编辑用户 - 库存管理系统", "/users/edit/"+ctx.Param("id"), user, true, ctx.Query("error"))
 }
 
 // DoEdit 处理编辑用户提交
@@ -211,10 +232,15 @@ func (c *UserController) DoEdit(ctx *gin.Context) {
 	}
 
 	fields := map[string]interface{}{
-		"username":  form.Username,
-		"real_name": form.RealName,
-		"role":      form.Role,
-		"status":    form.Status,
+		"username":      form.Username,
+		"real_name":     form.RealName,
+		"department_id": form.DepartmentID,
+		"role":          form.Role,
+		"status":        form.Status,
+	}
+	if !validateDepartmentID(form.DepartmentID) {
+		ctx.Redirect(http.StatusFound, "/users/edit/"+ctx.Param("id")+"?error=所选部门不存在或已禁用")
+		return
 	}
 	// 编辑时密码留空表示不修改
 	if form.Password != "" {

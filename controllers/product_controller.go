@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -38,7 +39,7 @@ type productForm struct {
 	Price       string `form:"price"`
 	Category    string `form:"category" binding:"required"`
 	SubCategory string `form:"subCategory"`
-	OwnerName   string `form:"ownerName"`
+	OwnerID     uint   `form:"ownerId"`
 	WarehouseID uint   `form:"warehouseId" binding:"required"`
 	LocationID  uint   `form:"locationId"`
 	Quantity    int    `form:"quantity" binding:"required"`
@@ -85,6 +86,92 @@ func (c *ProductController) List(ctx *gin.Context) {
 	}))
 }
 
+// inventoryFilter 库存查询筛选条件（用于回显表单选中态）
+type inventoryFilter struct {
+	Name            string
+	SKU             string
+	SN              string
+	Category        string
+	OwnerID         uint
+	OwnerDepartment string
+	WarehouseID     uint
+	LocationID      uint
+}
+
+// Inventory 库存查询页（name/sku/sn/category/owner/department/warehouse/location），结果不分页
+func (c *ProductController) Inventory(ctx *gin.Context) {
+	warehouseID, _ := strconv.ParseUint(ctx.Query("warehouse"), 10, 64)
+	locationID, _ := strconv.ParseUint(ctx.Query("location"), 10, 64)
+	ownerID, _ := strconv.ParseUint(ctx.Query("owner"), 10, 64)
+	filter := inventoryFilter{
+		Name:            ctx.Query("name"),
+		SKU:             ctx.Query("sku"),
+		SN:              ctx.Query("sn"),
+		Category:        ctx.Query("category"),
+		OwnerID:         uint(ownerID),
+		OwnerDepartment: ctx.Query("department"),
+		WarehouseID:     uint(warehouseID),
+		LocationID:      uint(locationID),
+	}
+	products, err := models.ListInventory(models.InventoryQuery{
+		Name:            filter.Name,
+		SKU:             filter.SKU,
+		SN:              filter.SN,
+		Category:        filter.Category,
+		OwnerID:         filter.OwnerID,
+		OwnerDepartment: filter.OwnerDepartment,
+		WarehouseID:     filter.WarehouseID,
+		LocationID:      filter.LocationID,
+	})
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "库存查询失败"})
+		return
+	}
+
+	warehouses, err := models.ListEnabledWarehouses()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "加载仓库列表失败"})
+		return
+	}
+	locations, err := models.ListEnabledLocations()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "加载仓位列表失败"})
+		return
+	}
+	users, err := models.ListEnabledUsers()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "加载归属人列表失败"})
+		return
+	}
+	departments, err := models.ListEnabledDepartments()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{"msg": "加载部门列表失败"})
+		return
+	}
+	type locationJSON struct {
+		ID          uint   `json:"id"`
+		WarehouseID uint   `json:"wh"`
+		Name        string `json:"name"`
+	}
+	locationData := make([]locationJSON, 0, len(locations))
+	for _, l := range locations {
+		locationData = append(locationData, locationJSON{ID: l.ID, WarehouseID: l.WarehouseID, Name: l.Name})
+	}
+	locationBytes, _ := json.Marshal(locationData)
+
+	ctx.HTML(http.StatusOK, "inventory.html", userPageData(ctx, gin.H{
+		"title":        "库存查询 - 库存管理系统",
+		"products":     products,
+		"total":        len(products),
+		"filter":       filter,
+		"categories":   models.ProductCategories,
+		"owners":       users,
+		"departments":  departments,
+		"warehouses":   warehouses,
+		"locationJSON": string(locationBytes),
+	}))
+}
+
 // Add 渲染创建商品（入库登记）页，服务端预生成一个候选 SN
 func (c *ProductController) Add(ctx *gin.Context) {
 	sn, err := models.GenerateProductSN()
@@ -118,6 +205,10 @@ func (c *ProductController) DoAdd(ctx *gin.Context) {
 	}
 	if !models.IsValidProductCategory(form.Category) {
 		fail("请选择有效的一级分类")
+		return
+	}
+	if form.OwnerID == 0 {
+		fail("请选择样品归属人")
 		return
 	}
 	price, priceErr := parsePriceInput(form.Price)
@@ -213,6 +304,10 @@ func (c *ProductController) DoEdit(ctx *gin.Context) {
 		fail("请选择有效的一级分类")
 		return
 	}
+	if form.OwnerID == 0 {
+		fail("请选择样品归属人")
+		return
+	}
 	price, priceErr := parsePriceInput(form.Price)
 	if priceErr != "" {
 		fail(priceErr)
@@ -245,7 +340,7 @@ func (c *ProductController) DoEdit(ctx *gin.Context) {
 		"category":     form.Category,
 		"sub_category": form.SubCategory,
 		"price":        price,
-		"owner_name":   form.OwnerName,
+		"owner_id":     form.OwnerID,
 		"warehouse_id": form.WarehouseID,
 		"location_id":  locationID,
 		"quantity":     form.Quantity,
@@ -277,23 +372,19 @@ func (c *ProductController) renderForm(ctx *gin.Context, action string, product 
 		return
 	}
 
-	// 样品归属人下拉：启用用户的展示名；历史归属人不在用户列表中时补充为额外选项保证回显
-	ownerNames := make([]string, 0, len(users))
-	for i := range users {
-		ownerNames = append(ownerNames, users[i].DisplayName())
+	// 样品归属人下拉：启用用户（带所属部门供表单自动带出）
+	type ownerOption struct {
+		ID   uint
+		Name string
+		Dept string
 	}
-	ownerExtra := ""
-	if product.OwnerName != "" {
-		ownerInList := false
-		for _, name := range ownerNames {
-			if name == product.OwnerName {
-				ownerInList = true
-				break
-			}
-		}
-		if !ownerInList {
-			ownerExtra = product.OwnerName
-		}
+	ownerOptions := make([]ownerOption, 0, len(users))
+	for i := range users {
+		ownerOptions = append(ownerOptions, ownerOption{ID: users[i].ID, Name: users[i].DisplayName(), Dept: users[i].DepartmentName})
+	}
+	selectedOwnerID := uint(0)
+	if product.OwnerID != nil {
+		selectedOwnerID = *product.OwnerID
 	}
 
 	// 编辑时当前仓库/仓位可能已被停用，补充进下拉数据，保证回显不丢失
@@ -343,8 +434,8 @@ func (c *ProductController) renderForm(ctx *gin.Context, action string, product 
 		"warehouses":           warehouses,
 		"locationsByWarehouse": locationsByWarehouse,
 		"selectedLocationID":   selectedLocationID,
-		"ownerNames":           ownerNames,
-		"ownerExtra":           ownerExtra,
+		"ownerOptions":         ownerOptions,
+		"selectedOwnerID":      selectedOwnerID,
 		"inboundDate":          inboundDate,
 		"ageDays":              product.AgeDays,
 	}))
@@ -359,10 +450,13 @@ func productFromForm(form *productForm) *models.Product {
 		SPU:         form.SPU,
 		Category:    form.Category,
 		SubCategory: form.SubCategory,
-		OwnerName:   form.OwnerName,
 		WarehouseID: form.WarehouseID,
 		Quantity:    form.Quantity,
 		Remark:      form.Remark,
+	}
+	if form.OwnerID > 0 {
+		ownerID := form.OwnerID
+		product.OwnerID = &ownerID
 	}
 	if form.LocationID > 0 {
 		product.LocationID = &form.LocationID
@@ -389,7 +483,7 @@ func parsePriceInput(s string) (*float64, string) {
 // validateLocation 校验仓位：必须属于所选仓库且为启用状态；未选择仓位时通过
 func validateLocation(warehouse *models.Warehouse, locationID uint) string {
 	if locationID == 0 {
-		return ""
+		return "请选择仓位"
 	}
 	location, err := models.GetLocationByID(locationID)
 	if err != nil || location.WarehouseID != warehouse.ID || location.Status != 1 {

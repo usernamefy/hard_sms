@@ -63,6 +63,10 @@
                     <div class="detail-value">{{ if .product.OwnerName }}{{ .product.OwnerName }}{{ else }}-{{ end }}</div>
                 </div>
                 <div class="detail-item">
+                    <div class="detail-label">归属部门</div>
+                    <div class="detail-value">{{ if .product.OwnerDepartment }}{{ .product.OwnerDepartment }}{{ else }}-{{ end }}</div>
+                </div>
+                <div class="detail-item">
                     <div class="detail-label">商品图片</div>
                     <div class="detail-value">
                         {{ if .product.Image }}
@@ -91,10 +95,6 @@
                 <div class="detail-item">
                     <div class="detail-label">已借出数量</div>
                     <div class="detail-value">{{ .product.BorrowedQty }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">入库数量</div>
-                    <div class="detail-value">{{ .product.Quantity }}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">所在仓库</div>

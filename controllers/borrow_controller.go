@@ -177,6 +177,8 @@ func (c *BorrowController) DoAdd(ctx *gin.Context) {
 		fail("登录用户不存在，请重新登录")
 		return
 	}
+	// 部门固定取当前登录用户所属部门（表单置灰不可修改）
+	form.Department = borrower.DepartmentName
 
 	now := time.Now()
 	order := &models.BorrowOrder{
@@ -384,6 +386,14 @@ func parseBorrowDraft(form *borrowForm) []borrowItemDraft {
 // renderForm 渲染新建借用表单；draft 为空时清单无行（通过搜索添加商品），
 // 校验失败回显时按草稿行带出商品快照信息
 func (c *BorrowController) renderForm(ctx *gin.Context, action string, form borrowForm, draft []borrowItemDraft, errMsg string) {
+	// 借用人部门默认带出当前登录用户所属部门（可手动修改）
+	if strings.TrimSpace(form.Department) == "" {
+		if uid, ok := sessions.Default(ctx).Get("user_id").(uint); ok && uid > 0 {
+			if borrower, err := models.GetUserByID(uid); err == nil {
+				form.Department = borrower.DepartmentName
+			}
+		}
+	}
 	rows := make([]borrowRowView, 0, len(draft))
 	for _, d := range draft {
 		if d.ProductID == 0 {

@@ -16,25 +16,31 @@ func SetDB(db *gorm.DB) {
 
 // User 用户表模型（映射 tbl_users，前缀由 NamingStrategy 全局配置）
 type User struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	Username  string         `gorm:"type:varchar(50);uniqueIndex;not null" json:"username"` // 用户名
-	Password  string         `gorm:"type:varchar(32);not null" json:"-"`                    // 密码（MD5 加密存储）
-	RealName  string         `gorm:"type:varchar(50)" json:"realName"`                      // 真实姓名
-	Role      string         `gorm:"type:varchar(20);default:admin" json:"role"`            // 角色
-	Status    int            `json:"status"`                                                // 状态：1 启用 0 禁用（不设 gorm 默认值，避免 Create 时零值被省略）
-	LastLogin *time.Time     `json:"lastLogin"`                                             // 最后登录时间
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	Username     string         `gorm:"type:varchar(50);uniqueIndex;not null" json:"username"` // 用户名
+	Password     string         `gorm:"type:varchar(32);not null" json:"-"`                    // 密码（MD5 加密存储）
+	RealName     string         `gorm:"type:varchar(50)" json:"realName"`                      // 真实姓名
+	DepartmentID uint           `gorm:"index" json:"departmentId"`                             // 部门，关联 tbl_departments.id（0 表示未设置）
+	Role         string         `gorm:"type:varchar(20);default:admin" json:"role"`            // 角色
+	Status       int            `json:"status"`                                                // 状态：1 启用 0 禁用（不设 gorm 默认值，避免 Create 时零值被省略）
+	LastLogin    *time.Time     `json:"lastLogin"`                                             // 最后登录时间
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+
+	// 展示字段：查询时填充，不落库
+	DepartmentName string `gorm:"-" json:"departmentName"` // 部门名称
 }
 
-// GetUserByID 根据 ID 查询用户
+// GetUserByID 根据 ID 查询用户（含部门名称填充）
 func GetUserByID(id uint) (*User, error) {
 	var user User
 	if err := DB.First(&user, id).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	users := []User{user}
+	fillUserDepartmentNames(DB, users)
+	return &users[0], nil
 }
 
 // DisplayName 用户展示名：优先真实姓名，其次用户名
@@ -48,11 +54,15 @@ func (u *User) DisplayName() string {
 	return u.Username
 }
 
-// ListEnabledUsers 查询全部启用状态的用户（供管理员下拉选择）
+// ListEnabledUsers 查询全部启用状态的用户（供管理员下拉选择），含部门名称填充
 func ListEnabledUsers() ([]User, error) {
 	var users []User
 	err := DB.Where("status = ?", 1).Order("id ASC").Find(&users).Error
-	return users, err
+	if err != nil {
+		return nil, err
+	}
+	fillUserDepartmentNames(DB, users)
+	return users, nil
 }
 
 // GetUserByUsername 根据用户名查询用户
@@ -92,6 +102,7 @@ func ListUsers(q UserQuery) ([]User, int64, error) {
 	if err := db.Order("id DESC").Offset((q.Page - 1) * q.PageSize).Limit(q.PageSize).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
+	fillUserDepartmentNames(DB, users)
 	return users, total, nil
 }
 

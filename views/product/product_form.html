@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20260921-10">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260923-1">
 </head>
 <body class="admin-body">
 {{ template "topbar" . }}
@@ -31,7 +31,7 @@
             <a class="btn btn-outline" href="/products">返回列表</a>
         </div>
 
-        <div class="card form-card form-card-wide">
+        <div class="card">
             {{ if .error }}
             <div class="login-alert">{{ .error }}</div>
             {{ end }}
@@ -78,21 +78,18 @@
                         <input type="text" id="subCategory" name="subCategory" value="{{ .product.SubCategory }}" maxlength="100" placeholder="请输入二级分类（可选）">
                     </div>
                     <div class="form-item">
-                        <label for="ownerName">样品归属人</label>
-                        <select id="ownerName" name="ownerName">
-                            <option value="">请选择样品归属人</option>
-                            {{ range .ownerNames }}
-                            <option value="{{ . }}" {{ if eq . $.product.OwnerName }}selected{{ end }}>{{ . }}</option>
-                            {{ end }}
-                            {{ if .ownerExtra }}
-                            <option value="{{ .ownerExtra }}" selected>{{ .ownerExtra }}</option>
+                        <label for="ownerId">样品归属人 <em>*</em></label>
+                        <select id="ownerId" name="ownerId" required>
+                            <option value="0">请选择样品归属人</option>
+                            {{ range .ownerOptions }}
+                            <option value="{{ .ID }}" data-dept="{{ .Dept }}" {{ if eq .ID $.selectedOwnerID }}selected{{ end }}>{{ .Name }}</option>
                             {{ end }}
                         </select>
                     </div>
-                </div>
-
-                <div class="card-title form-section-gap">入库信息</div>
-                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="ownerDepartment">归属部门</label>
+                        <input type="text" id="ownerDepartment" value="{{ .product.OwnerDepartment }}" readonly placeholder="选择归属人后自动带出">
+                    </div>
                     <div class="form-item">
                         <label for="warehouseId">仓库 <em>*</em></label>
                         <select id="warehouseId" name="warehouseId" required>
@@ -103,8 +100,8 @@
                         </select>
                     </div>
                     <div class="form-item">
-                        <label for="locationId">仓位</label>
-                        <select id="locationId" name="locationId">
+                        <label for="locationId">仓位 <em>*</em></label>
+                        <select id="locationId" name="locationId" required>
                             <option value="">请选择仓位</option>
                         </select>
                     </div>
@@ -147,6 +144,16 @@
             var whSel = document.getElementById('warehouseId');
             var locSel = document.getElementById('locationId');
             var currentLoc = '{{ .selectedLocationID }}';
+
+            // 选择归属人后自动带出其所属部门
+            var ownerSel = document.getElementById('ownerId');
+            var ownerDept = document.getElementById('ownerDepartment');
+            function syncOwnerDepartment() {
+                var opt = ownerSel.options[ownerSel.selectedIndex];
+                ownerDept.value = opt && opt.value ? (opt.getAttribute('data-dept') || '') : '';
+            }
+            ownerSel.addEventListener('change', syncOwnerDepartment);
+            syncOwnerDepartment();
 
             function fillLocations() {
                 var options = locations[String(whSel.value)] || [];

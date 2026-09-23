@@ -40,7 +40,7 @@ type Product struct {
 	Category    string    `gorm:"type:varchar(50);not null" json:"category"`       // 一级分类
 	SubCategory string    `gorm:"type:varchar(100)" json:"subCategory"`            // 二级分类（自由文本）
 	Price       *float64  `gorm:"type:decimal(10,2)" json:"price"`                 // 价格（元），可空
-	OwnerName   string    `gorm:"type:varchar(50)" json:"ownerName"`               // 样品归属人
+	OwnerID     *uint     `gorm:"index" json:"ownerId"`                            // 样品归属人，关联 tbl_users.id（可空）
 	WarehouseID uint      `gorm:"not null;index" json:"warehouseId"`               // 所在仓库
 	LocationID  *uint     `gorm:"index" json:"locationId"`                         // 所在仓位，可空
 	InboundDate time.Time `gorm:"type:date;not null" json:"inboundDate"`           // 入库日期（系统自动）
@@ -52,10 +52,12 @@ type Product struct {
 	CreatedBy   *uint     `json:"createdBy"` // 创建人（tbl_users.id）
 
 	// 展示字段：查询时填充，不落库
-	WarehouseName string `gorm:"-" json:"warehouseName"`
-	LocationName  string `gorm:"-" json:"locationName"`
-	CreatedByName string `gorm:"-" json:"createdByName"`
-	AgeDays       int64  `gorm:"-" json:"ageDays"` // 库龄（天）= 当前日期 - 入库日期
+	WarehouseName   string `gorm:"-" json:"warehouseName"`
+	LocationName    string `gorm:"-" json:"locationName"`
+	CreatedByName   string `gorm:"-" json:"createdByName"`
+	OwnerName       string `gorm:"-" json:"ownerName"`       // 归属人展示名（owner_id 关联用户填充）
+	OwnerDepartment string `gorm:"-" json:"ownerDepartment"` // 归属部门（归属人用户当前部门填充）
+	AgeDays         int64  `gorm:"-" json:"ageDays"`         // 库龄（天）= 当前日期 - 入库日期
 
 	// 借用流水口径（查询时计算，不落库）
 	BorrowedQty int `gorm:"-" json:"borrowedQty"` // 已借出数量 = 入库数量 - 在库数量
@@ -196,6 +198,7 @@ func fillProductDisplay(db *gorm.DB, products []Product) {
 	warehouseIDs := make([]uint, 0, len(products))
 	locationIDs := make([]uint, 0, len(products))
 	userIDs := make([]uint, 0, len(products))
+	ownerIDs := make([]uint, 0, len(products))
 	for i := range products {
 		p := &products[i]
 		if !p.InboundDate.IsZero() {
@@ -210,6 +213,9 @@ func fillProductDisplay(db *gorm.DB, products []Product) {
 		}
 		if p.CreatedBy != nil {
 			userIDs = appendUniqueID(userIDs, *p.CreatedBy)
+		}
+		if p.OwnerID != nil {
+			ownerIDs = appendUniqueID(ownerIDs, *p.OwnerID)
 		}
 	}
 
@@ -249,6 +255,26 @@ func fillProductDisplay(db *gorm.DB, products []Product) {
 			for i := range products {
 				if products[i].CreatedBy != nil {
 					products[i].CreatedByName = names[*products[i].CreatedBy]
+				}
+			}
+		}
+	}
+
+	// 归属人/归属部门：owner_id 关联用户与用户当前部门（查询时填充）
+	if len(ownerIDs) > 0 {
+		var owners []User
+		if err := db.Where("id IN ?", ownerIDs).Find(&owners).Error; err == nil {
+			fillUserDepartmentNames(db, owners)
+			ownerByID := make(map[uint]User, len(owners))
+			for _, u := range owners {
+				ownerByID[u.ID] = u
+			}
+			for i := range products {
+				if products[i].OwnerID != nil {
+					if u, ok := ownerByID[*products[i].OwnerID]; ok {
+						products[i].OwnerName = u.DisplayName()
+						products[i].OwnerDepartment = u.DepartmentName
+					}
 				}
 			}
 		}

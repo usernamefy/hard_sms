@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260922-4">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item active" href="/">主页</a>
+            <a class="menu-item" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="/borrows">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="/logs">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>库存查询</h2>
+                <p>查询商品库存信息</p>
+            </div>
+            <div class="page-head-actions">
+                <a class="btn btn-outline" href="/">返回首页</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <form method="get" action="/inventory" class="admin-form">
+                <div class="inventory-filter-grid">
+                    <div class="form-item">
+                        <label for="fName">商品名称</label>
+                        <input type="text" id="fName" name="name" value="{{ .filter.Name }}" placeholder="请输入商品名称">
+                    </div>
+                    <div class="form-item">
+                        <label for="fSku">SKU 编码</label>
+                        <input type="text" id="fSku" name="sku" value="{{ .filter.SKU }}" placeholder="请输入 SKU 编码">
+                    </div>
+                    <div class="form-item">
+                        <label for="fSn">SN 码</label>
+                        <input type="text" id="fSn" name="sn" value="{{ .filter.SN }}" placeholder="请输入 SN 码">
+                    </div>
+                    <div class="form-item">
+                        <label for="fCategory">分类</label>
+                        <select id="fCategory" name="category">
+                            <option value="">全部分类</option>
+                            {{ range .categories }}
+                            <option value="{{ . }}" {{ if eq . $.filter.Category }}selected{{ end }}>{{ . }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="fOwner">归属人</label>
+                        <select id="fOwner" name="owner">
+                            <option value="">全部归属人</option>
+                            {{ range .owners }}
+                            <option value="{{ .ID }}" {{ if eq $.filter.OwnerID .ID }}selected{{ end }}>{{ .DisplayName }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="fDepartment">归属部门</label>
+                        <select id="fDepartment" name="department">
+                            <option value="">全部部门</option>
+                            {{ range .departments }}
+                            <option value="{{ .Name }}" {{ if eq .Name $.filter.OwnerDepartment }}selected{{ end }}>{{ .Name }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="fWarehouse">仓库</label>
+                        <select id="fWarehouse" name="warehouse">
+                            <option value="">全部仓库</option>
+                            {{ range .warehouses }}
+                            <option value="{{ .ID }}" {{ if eq $.filter.WarehouseID .ID }}selected{{ end }}>{{ .Name }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="fLocation">仓位</label>
+                        <select id="fLocation" name="location">
+                            <option value="">全部仓位</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="btnReset">重 置</button>
+                    <button type="submit" class="btn btn-primary">查 询</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card card-gap-top">
+            <div class="card-head">
+                <div class="card-title">查询结果</div>
+                <span class="pager-info">共找到 {{ .total }} 条记录</span>
+            </div>
+            <table class="data-table" id="inventoryTable">
+                <thead>
+                <tr>
+                    <th>商品名称</th>
+                    <th>SKU 编码</th>
+                    <th>SN 码</th>
+                    <th>分类</th>
+                    <th>归属人</th>
+                    <th>归属部门</th>
+                    <th>仓库</th>
+                    <th>仓位</th>
+                    <th>当前库存</th>
+                    <th>可用数量</th>
+                    <th>借出数量</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{ range .products }}
+                <tr>
+                    <td><a class="table-link" href="/products/{{ .ID }}">{{ .Name }}</a></td>
+                    <td>{{ if .SKU }}{{ .SKU }}{{ else }}-{{ end }}</td>
+                    <td>{{ .SN }}</td>
+                    <td>{{ .Category }}</td>
+                    <td>{{ if .OwnerName }}{{ .OwnerName }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .OwnerDepartment }}{{ .OwnerDepartment }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .WarehouseName }}{{ .WarehouseName }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .LocationName }}{{ .LocationName }}{{ else }}-{{ end }}</td>
+                    <td {{ if eq .InStockQty 0 }}class="quantity-zero"{{ end }}>{{ .InStockQty }}</td>
+                    <td>{{ .InStockQty }}</td>
+                    <td>{{ .BorrowedQty }}</td>
+                </tr>
+                {{ else }}
+                <tr>
+                    <td colspan="11" class="empty-tip">📦 暂无库存数据</td>
+                </tr>
+                {{ end }}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<script>
+(function () {
+    var locationOptions = {{ .locationJSON }};
+    var warehouseSelect = document.getElementById('fWarehouse');
+    var locationSelect = document.getElementById('fLocation');
+
+    // 按仓库过滤仓位选项；keepId 用于筛选回显时保留已选仓位
+    function renderLocationOptions(warehouseId, keepId) {
+        locationSelect.innerHTML = '<option value="">全部仓位</option>';
+        locationOptions.forEach(function (loc) {
+            if (warehouseId && loc.wh !== warehouseId) return;
+            var opt = document.createElement('option');
+            opt.value = loc.id;
+            opt.textContent = loc.name;
+            if (keepId && loc.id === keepId) opt.selected = true;
+            locationSelect.appendChild(opt);
+        });
+    }
+
+    var initialWarehouse = warehouseSelect.value ? Number(warehouseSelect.value) : 0;
+    var initialLocation = {{ .filter.LocationID }};
+    renderLocationOptions(initialWarehouse, initialLocation);
+
+    warehouseSelect.addEventListener('change', function () {
+        renderLocationOptions(this.value ? Number(this.value) : 0, 0);
+    });
+
+    document.getElementById('btnReset').addEventListener('click', function () {
+        window.location.href = '/inventory';
+    });
+})();
+</script>
+</body>
+</html>

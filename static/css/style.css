@@ -116,6 +116,29 @@ a {
     margin-top: 10px;
 }
 
+/* 库存查询页 */
+.page-head-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.inventory-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 24px;
+}
+
+.quantity-zero {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+@media (max-width: 900px) {
+    .inventory-filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .borrow-info-grid {
         grid-template-columns: 1fr;

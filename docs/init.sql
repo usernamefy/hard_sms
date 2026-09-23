@@ -11,18 +11,20 @@ USE `sms`;
 
 -- 1. 用户表
 CREATE TABLE IF NOT EXISTS `tbl_users` (
-  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `username`   VARCHAR(50) NOT NULL,
-  `password`   VARCHAR(32) NOT NULL,
-  `real_name`  VARCHAR(50) DEFAULT NULL,
-  `role`       VARCHAR(20) DEFAULT 'admin',
-  `status`     INT DEFAULT 1,
-  `last_login` DATETIME DEFAULT NULL,
-  `created_at` DATETIME DEFAULT NULL,
-  `updated_at` DATETIME DEFAULT NULL,
-  `deleted_at` DATETIME DEFAULT NULL,
+  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `username`      VARCHAR(50)  NOT NULL,
+  `password`      VARCHAR(32)  NOT NULL,
+  `real_name`     VARCHAR(50)  DEFAULT NULL,
+  `department_id` INT UNSIGNED DEFAULT NULL COMMENT '部门，关联 tbl_departments.id',
+  `role`          VARCHAR(20)  DEFAULT 'admin',
+  `status`        INT DEFAULT 1,
+  `last_login`    DATETIME DEFAULT NULL,
+  `created_at`    DATETIME DEFAULT NULL,
+  `updated_at`    DATETIME DEFAULT NULL,
+  `deleted_at`    DATETIME DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_tbl_users_username` (`username`),
+  KEY `idx_tbl_users_department` (`department_id`),
   KEY `idx_tbl_users_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -32,6 +34,25 @@ INSERT INTO `tbl_users`
   (`username`, `password`, `real_name`, `role`, `status`, `created_at`, `updated_at`)
 VALUES
   ('admin', '0192023a7bbd73250516f069df18b500', '系统管理员', 'admin', 1, NOW(), NOW());
+
+-- 2.1 部门表 + 初始部门数据（技术部 / 销售部 / 运营部）
+CREATE TABLE IF NOT EXISTS `tbl_departments` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`       VARCHAR(50)  NOT NULL COMMENT '部门名称',
+  `status`     INT DEFAULT 1 COMMENT '状态：1 启用 0 禁用',
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tbl_departments_name` (`name`),
+  KEY `idx_tbl_departments_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门表';
+
+INSERT IGNORE INTO `tbl_departments` (`name`, `status`, `created_at`, `updated_at`)
+VALUES
+  ('技术部', 1, NOW(), NOW()),
+  ('销售部', 1, NOW(), NOW()),
+  ('运营部', 1, NOW(), NOW());
 
 -- 3. 仓库表
 CREATE TABLE IF NOT EXISTS `tbl_warehouses` (
@@ -76,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `tbl_products` (
   `category`     VARCHAR(50)  NOT NULL COMMENT '一级分类',
   `sub_category` VARCHAR(100) DEFAULT NULL COMMENT '二级分类（文本）',
   `price`        DECIMAL(10,2) DEFAULT NULL COMMENT '价格（元）',
-  `owner_name`   VARCHAR(50)  DEFAULT NULL COMMENT '样品归属人',
+  `owner_id`     INT UNSIGNED DEFAULT NULL COMMENT '样品归属人，关联 tbl_users.id',
   `warehouse_id` INT UNSIGNED NOT NULL COMMENT '所在仓库',
   `location_id`  INT UNSIGNED DEFAULT NULL COMMENT '所在仓位',
   `inbound_date` DATE         NOT NULL COMMENT '入库日期（系统自动）',
@@ -190,4 +211,19 @@ CREATE TABLE IF NOT EXISTS `tbl_operation_logs` (
 --         JOIN `tbl_borrow_orders` o ON o.`id` = i.`order_id` AND o.`deleted_at` IS NULL
 --         WHERE o.`status` = 1 AND i.`product_id` = p.`id`), 0), 0)
 --   WHERE p.`deleted_at` IS NULL;
+-- 2026-09-22: 新增部门表（技术部/销售部/运营部），用户表增加部门列
+-- CREATE TABLE IF NOT EXISTS `tbl_departments` ( ... 见上方 2.1 节 ... );
+-- ALTER TABLE `tbl_users`
+--   ADD COLUMN `department_id` INT UNSIGNED DEFAULT NULL COMMENT '部门，关联 tbl_departments.id' AFTER `real_name`,
+--   ADD KEY `idx_tbl_users_department` (`department_id`);
+-- 2026-09-22: 商品归属人改为存用户 ID（原 owner_name / owner_department 快照列删除，部门由归属人用户实时带出）
+-- ALTER TABLE `tbl_products`
+--   ADD COLUMN `owner_id` INT UNSIGNED DEFAULT NULL COMMENT '样品归属人，关联 tbl_users.id' AFTER `owner_department`;
+-- UPDATE `tbl_products` p
+--   JOIN `tbl_users` u ON u.`real_name` = p.`owner_name` AND u.`deleted_at` IS NULL
+--   SET p.`owner_id` = u.`id` WHERE p.`owner_id` IS NULL;
+-- UPDATE `tbl_products` p
+--   JOIN `tbl_users` u ON u.`username` = p.`owner_name` AND u.`deleted_at` IS NULL
+--   SET p.`owner_id` = u.`id` WHERE p.`owner_id` IS NULL;
+-- ALTER TABLE `tbl_products` DROP COLUMN `owner_name`, DROP COLUMN `owner_department`;
 -- =============================================

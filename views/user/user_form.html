@@ -46,6 +46,15 @@
                     <input type="text" id="realName" name="realName" value="{{ .user.RealName }}" maxlength="50" placeholder="选填">
                 </div>
                 <div class="form-item">
+                    <label for="departmentId">部门</label>
+                    <select id="departmentId" name="departmentId">
+                        <option value="0">未设置</option>
+                        {{ range .departments }}
+                        <option value="{{ .ID }}" {{ if eq $.user.DepartmentID .ID }}selected{{ end }}>{{ .Name }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+                <div class="form-item">
                     <label for="role">角色</label>
                     <select id="role" name="role">
                         <option value="admin" {{ if eq .user.Role "admin" }}selected{{ end }}>管理员</option>

@@ -134,6 +134,9 @@ func Setup() *gin.Engine {
 		admin.POST("/products/edit/:id", controllers.ProductCtl.DoEdit)
 		admin.GET("/products/:id", controllers.ProductCtl.Detail)
 
+		// 库存查询（首页快捷操作进入）
+		admin.GET("/inventory", controllers.ProductCtl.Inventory)
+
 		// 借用管理
 		admin.GET("/borrows", controllers.BorrowCtl.List)
 		admin.GET("/borrows/add", controllers.BorrowCtl.Add)
