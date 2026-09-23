@@ -61,6 +61,8 @@ func OperationLogActionClass(action string) string {
 		return "tag-info"
 	case "消耗":
 		return "tag-danger"
+	case "样品异动":
+		return "tag-warning"
 	default:
 		return "tag-info"
 	}
@@ -91,7 +93,7 @@ func (c *OperationLogController) List(ctx *gin.Context) {
 		"logs":       logs,
 		"keyword":    ctx.Query("keyword"),
 		"action":     ctx.Query("action"),
-		"actions":    []string{"商品入库", "借用", "归还", "消耗"},
+		"actions":    []string{"商品入库", "借用", "归还", "消耗", "样品异动"},
 		"page":       page,
 		"total":      total,
 		"totalPages": totalPages,

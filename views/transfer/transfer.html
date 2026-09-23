@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260923-3">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item" href="/">主页</a>
+            <a class="menu-item" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="/borrows">借用记录</a>
+            <a class="menu-item active" href="/transfers">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="/logs">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>样品异动</h2>
+                <p>人员离职或组织架构变更时，转移样品归属；或在不同仓库间转移样品</p>
+            </div>
+        </div>
+
+        {{ if .error }}
+        <div class="login-alert">{{ .error }}</div>
+        {{ end }}
+        {{ if gt .doneQty 0 }}
+        <div class="login-alert login-alert-success">异动成功：{{ .doneMsg }}</div>
+        {{ end }}
+
+        <div class="tab-bar">
+            <button type="button" class="tab-btn active" id="tabOwner" onclick="switchTab('owner')">人员转移</button>
+            <button type="button" class="tab-btn" id="tabWarehouse" onclick="switchTab('warehouse')">移仓</button>
+        </div>
+
+        <!-- 人员转移 -->
+        <div class="card" id="ownerTransferCard">
+            <div class="card-head"><div class="card-title">人员转移信息</div></div>
+            <form method="post" action="/transfers/owner" class="admin-form" id="ownerForm">
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="oldOwner">原归属人 <em>*</em></label>
+                        <select id="oldOwner" name="oldOwnerId" required>
+                            <option value="0">请选择原归属人</option>
+                            {{ range .users }}
+                            <option value="{{ .ID }}" data-dept="{{ .DepartmentName }}">{{ .DisplayName }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="oldDepartment">原归属部门</label>
+                        <input type="text" id="oldDepartment" value="" readonly placeholder="选择原归属人后自动带出">
+                    </div>
+                </div>
+
+                <div class="form-item form-item--full" id="ownerSamplesGroup" hidden>
+                    <label>选择样品 <em>*</em></label>
+                    <div class="select-all-line">
+                        <input type="checkbox" id="ownerSelectAll" onchange="toggleAllSamples('ownerSampleList', this)">
+                        <label for="ownerSelectAll">全选</label>
+                        <span class="selected-count" id="ownerCount">已选择 0 个样品</span>
+                    </div>
+                    <div class="sample-list" id="ownerSampleList"></div>
+                    <p class="form-hint" id="ownerEmptyTip" hidden>该归属人名下暂无样品</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="newOwner">新归属人 <em>*</em></label>
+                        <select id="newOwner" name="newOwnerId" required>
+                            <option value="0">请选择新归属人</option>
+                            {{ range .users }}
+                            <option value="{{ .ID }}" data-dept="{{ .DepartmentName }}">{{ .DisplayName }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="newDepartment">新归属部门</label>
+                        <input type="text" id="newDepartment" value="" readonly placeholder="选择新归属人后自动带出">
+                    </div>
+                    <div class="form-item">
+                        <label for="ownerReason">异动原因</label>
+                        <select id="ownerReason" name="reason">
+                            <option value="">请选择异动原因</option>
+                            {{ range .ownerReasons }}
+                            <option value="{{ . }}">{{ . }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="ownerRemark">备注</label>
+                        <input type="text" id="ownerRemark" name="remark" maxlength="500" placeholder="请输入备注信息（可选）">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">确认转移</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 移仓 -->
+        <div class="card" id="warehouseTransferCard" hidden>
+            <div class="card-head"><div class="card-title">移仓信息</div></div>
+            <form method="post" action="/transfers/warehouse" class="admin-form" id="whForm">
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="sourceWarehouse">源仓库 <em>*</em></label>
+                        <select id="sourceWarehouse" name="sourceWarehouseId" required>
+                            <option value="0">请选择源仓库</option>
+                            {{ range .warehouses }}
+                            <option value="{{ .ID }}">{{ .Name }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="sourceLocation">源仓位</label>
+                        <select id="sourceLocation" name="sourceLocationId">
+                            <option value="0">全部仓位</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-item form-item--full" id="whSamplesGroup" hidden>
+                    <label>选择样品 <em>*</em></label>
+                    <div class="select-all-line">
+                        <input type="checkbox" id="whSelectAll" onchange="toggleAllSamples('whSampleList', this)">
+                        <label for="whSelectAll">全选</label>
+                        <span class="selected-count" id="whCount">已选择 0 个样品</span>
+                    </div>
+                    <div class="sample-list" id="whSampleList"></div>
+                    <p class="form-hint" id="whEmptyTip" hidden>该仓库（仓位）下暂无样品</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label for="targetWarehouse">目标仓库 <em>*</em></label>
+                        <select id="targetWarehouse" name="targetWarehouseId" required>
+                            <option value="0">请选择目标仓库</option>
+                            {{ range .warehouses }}
+                            <option value="{{ .ID }}">{{ .Name }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="targetLocation">目标仓位</label>
+                        <select id="targetLocation" name="targetLocationId">
+                            <option value="0">请选择目标仓位（可选）</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="whReason">移仓原因</label>
+                        <select id="whReason" name="reason">
+                            <option value="">请选择移仓原因</option>
+                            {{ range .whReasons }}
+                            <option value="{{ . }}">{{ . }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="whRemark">备注</label>
+                        <input type="text" id="whRemark" name="remark" maxlength="500" placeholder="请输入备注信息（可选）">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">确认移仓</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+(function () {
+    var locationOptions = {{ .locationJSON }};
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    // ==================== Tab 切换 ====================
+    window.switchTab = function (type) {
+        var isOwner = type === 'owner';
+        document.getElementById('ownerTransferCard').hidden = !isOwner;
+        document.getElementById('warehouseTransferCard').hidden = isOwner;
+        document.getElementById('tabOwner').classList.toggle('active', isOwner);
+        document.getElementById('tabWarehouse').classList.toggle('active', !isOwner);
+    };
+
+    // ==================== 仓位级联 ====================
+    function fillLocationOptions(selectEl, warehouseId, placeholder) {
+        selectEl.innerHTML = '';
+        var first = document.createElement('option');
+        first.value = '0';
+        first.textContent = placeholder;
+        selectEl.appendChild(first);
+        locationOptions.forEach(function (loc) {
+            if (warehouseId && loc.wh !== warehouseId) return;
+            var opt = document.createElement('option');
+            opt.value = loc.id;
+            opt.textContent = loc.name;
+            selectEl.appendChild(opt);
+        });
+    }
+
+    var sourceWarehouse = document.getElementById('sourceWarehouse');
+    var sourceLocation = document.getElementById('sourceLocation');
+    var targetWarehouse = document.getElementById('targetWarehouse');
+    var targetLocation = document.getElementById('targetLocation');
+
+    sourceWarehouse.addEventListener('change', function () {
+        fillLocationOptions(sourceLocation, Number(this.value) || 0, '全部仓位');
+        loadWarehouseSamples();
+    });
+    sourceLocation.addEventListener('change', loadWarehouseSamples);
+    targetWarehouse.addEventListener('change', function () {
+        fillLocationOptions(targetLocation, Number(this.value) || 0, '请选择目标仓位（可选）');
+    });
+
+    // ==================== 人员转移 ====================
+    var oldOwner = document.getElementById('oldOwner');
+    var newOwner = document.getElementById('newOwner');
+
+    function selectedDept(selectEl) {
+        var opt = selectEl.options[selectEl.selectedIndex];
+        return opt && opt.value ? (opt.getAttribute('data-dept') || '') : '';
+    }
+
+    function sampleRow(s, labelMode, dept) {
+        var div = document.createElement('div');
+        div.className = 'sample-item';
+        var details;
+        if (labelMode === 'owner') {
+            // 人员转移：与设计稿一致（SKU / 部门 / 入库日期 / 库龄）
+            details =
+                '<span><span class="sample-detail-label">SKU:</span>' + esc(s.sku || '-') + '</span>' +
+                '<span><span class="sample-detail-label">部门:</span>' + esc(dept || '-') + '</span>' +
+                '<span><span class="sample-detail-label">入库日期:</span>' + esc(s.inboundDate || '-') + '</span>' +
+                '<span><span class="sample-detail-label">库龄:</span><span style="color: ' +
+                (s.ageDays >= 365 ? '#dc2626' : s.ageDays >= 180 ? '#f59e0b' : '#059669') + ';">' + s.ageDays + ' 天</span></span>';
+        } else {
+            // 移仓：与设计稿一致（SKU / 仓位 / 数量 / 入库日期 / 库龄）
+            details =
+                '<span><span class="sample-detail-label">SKU:</span>' + esc(s.sku || '-') + '</span>' +
+                '<span><span class="sample-detail-label">仓位:</span>' + esc(s.locationName || '-') + '</span>' +
+                '<span><span class="sample-detail-label">数量:</span>' + s.quantity + '</span>' +
+                '<span><span class="sample-detail-label">入库日期:</span>' + esc(s.inboundDate || '-') + '</span>' +
+                '<span><span class="sample-detail-label">库龄:</span><span style="color: ' +
+                (s.ageDays >= 365 ? '#dc2626' : s.ageDays >= 180 ? '#f59e0b' : '#059669') + ';">' + s.ageDays + ' 天</span></span>';
+        }
+        div.innerHTML =
+            '<input type="checkbox" class="sample-checkbox" name="productIds" value="' + s.id + '">' +
+            '<div class="sample-info">' +
+            '<div class="sample-name">' + esc(s.name) + '</div>' +
+            '<div class="sample-details">' + details + '</div></div>';
+        var checkbox = div.querySelector('input');
+        checkbox.addEventListener('change', function () { updateSampleCount(div.parentNode); });
+        return div;
+    }
+
+    function renderSampleList(listEl, samples, labelMode, dept) {
+        listEl.innerHTML = '';
+        samples.forEach(function (s) {
+            listEl.appendChild(sampleRow(s, labelMode, dept));
+        });
+        updateSampleCount(listEl);
+    }
+
+    function updateSampleCount(listEl) {
+        var countEl = document.getElementById(listEl.id === 'ownerSampleList' ? 'ownerCount' : 'whCount');
+        var checked = listEl.querySelectorAll('input:checked').length;
+        countEl.textContent = '已选择 ' + checked + ' 个样品';
+    }
+
+    window.toggleAllSamples = function (listId, master) {
+        var listEl = document.getElementById(listId);
+        listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+            cb.checked = master.checked;
+        });
+        updateSampleCount(listEl);
+    };
+
+    function fetchSamples(params, callback) {
+        fetch('/transfers/api/samples?' + params)
+            .then(function (res) { return res.json(); })
+            .then(function (data) { callback(data.samples || []); })
+            .catch(function () { callback([]); });
+    }
+
+    var ownerSamplesGroup = document.getElementById('ownerSamplesGroup');
+    var ownerSampleList = document.getElementById('ownerSampleList');
+    var ownerEmptyTip = document.getElementById('ownerEmptyTip');
+    var ownerSelectAll = document.getElementById('ownerSelectAll');
+
+    oldOwner.addEventListener('change', function () {
+        document.getElementById('oldDepartment').value = selectedDept(oldOwner);
+        var ownerId = Number(oldOwner.value) || 0;
+        if (!ownerId) {
+            ownerSamplesGroup.hidden = true;
+            ownerSampleList.innerHTML = '';
+            return;
+        }
+        fetchSamples('ownerId=' + ownerId, function (samples) {
+            ownerSamplesGroup.hidden = false;
+            ownerEmptyTip.hidden = samples.length > 0;
+            ownerSampleList.hidden = samples.length === 0;
+            ownerSelectAll.checked = false;
+            renderSampleList(ownerSampleList, samples, 'owner', selectedDept(oldOwner));
+        });
+    });
+
+    newOwner.addEventListener('change', function () {
+        document.getElementById('newDepartment').value = selectedDept(newOwner);
+    });
+
+    // ==================== 移仓 ====================
+    var whSamplesGroup = document.getElementById('whSamplesGroup');
+    var whSampleList = document.getElementById('whSampleList');
+    var whEmptyTip = document.getElementById('whEmptyTip');
+    var whSelectAll = document.getElementById('whSelectAll');
+
+    function loadWarehouseSamples() {
+        var whId = Number(sourceWarehouse.value) || 0;
+        if (!whId) {
+            whSamplesGroup.hidden = true;
+            whSampleList.innerHTML = '';
+            return;
+        }
+        var params = 'warehouseId=' + whId + '&locationId=' + (Number(sourceLocation.value) || 0);
+        fetchSamples(params, function (samples) {
+            whSamplesGroup.hidden = false;
+            whEmptyTip.hidden = samples.length > 0;
+            whSampleList.hidden = samples.length === 0;
+            whSelectAll.checked = false;
+            renderSampleList(whSampleList, samples, 'wh', '');
+        });
+    }
+
+    // ==================== 提交校验 ====================
+    document.getElementById('ownerForm').addEventListener('submit', function (e) {
+        var oldId = Number(oldOwner.value) || 0;
+        var newId = Number(newOwner.value) || 0;
+        if (!oldId) { e.preventDefault(); alert('请选择原归属人'); return; }
+        if (!newId) { e.preventDefault(); alert('请新选择新归属人'); return; }
+        if (oldId === newId) { e.preventDefault(); alert('新归属人不能与原归属人相同'); return; }
+        if (!ownerSampleList.querySelector('input:checked')) {
+            e.preventDefault();
+            alert('请勾选要转移的样品');
+        }
+    });
+
+    document.getElementById('whForm').addEventListener('submit', function (e) {
+        var srcId = Number(sourceWarehouse.value) || 0;
+        var tgtId = Number(targetWarehouse.value) || 0;
+        if (!srcId) { e.preventDefault(); alert('请选择源仓库'); return; }
+        if (!tgtId) { e.preventDefault(); alert('请选择目标仓库'); return; }
+        if (srcId === tgtId) { e.preventDefault(); alert('目标仓库不能与源仓库相同'); return; }
+        if (!whSampleList.querySelector('input:checked')) {
+            e.preventDefault();
+            alert('请勾选要移仓的样品');
+        }
+    });
+})();
+</script>
+</body>
+</html>

@@ -217,6 +217,41 @@ CREATE TABLE IF NOT EXISTS `tbl_consume_records` (
   KEY `idx_tbl_consume_records_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消耗记录表';
 
+-- 11. 样品异动记录表（每个样品一条异动记录）
+CREATE TABLE IF NOT EXISTS `tbl_transfer_records` (
+  `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `transfer_no`         VARCHAR(50)  NOT NULL COMMENT '异动单号（自动生成 TR+日期+序号，唯一）',
+  `type`                INT          NOT NULL COMMENT '异动类型：1 人员转移 / 2 移仓',
+  `product_id`          INT UNSIGNED NOT NULL COMMENT '商品，关联 tbl_products.id',
+  `product_name`        VARCHAR(100) NOT NULL COMMENT '商品名称快照',
+  `product_sn`          VARCHAR(50)  NOT NULL COMMENT 'SN 快照',
+  `from_owner_id`       INT UNSIGNED DEFAULT NULL COMMENT '原归属人，关联 tbl_users.id（人员转移用）',
+  `from_owner_name`     VARCHAR(50)  DEFAULT NULL COMMENT '原归属人展示名（快照）',
+  `from_department`     VARCHAR(50)  DEFAULT NULL COMMENT '原归属部门（快照）',
+  `to_owner_id`         INT UNSIGNED DEFAULT NULL COMMENT '新归属人，关联 tbl_users.id（人员转移用）',
+  `to_owner_name`       VARCHAR(50)  DEFAULT NULL COMMENT '新归属人展示名（快照）',
+  `to_department`       VARCHAR(50)  DEFAULT NULL COMMENT '新归属部门（快照）',
+  `from_warehouse_id`   INT UNSIGNED DEFAULT NULL COMMENT '源仓库（移仓用）',
+  `from_warehouse_name` VARCHAR(100) DEFAULT NULL COMMENT '源仓库名称（快照）',
+  `from_location_id`    INT UNSIGNED DEFAULT NULL COMMENT '源仓位（0 表示原无仓位）',
+  `from_location_name`  VARCHAR(100) DEFAULT NULL COMMENT '源仓库名称（快照）',
+  `to_warehouse_id`     INT UNSIGNED DEFAULT NULL COMMENT '目标仓库（移仓用）',
+  `to_warehouse_name`   VARCHAR(100) DEFAULT NULL COMMENT '目标仓库名称（快照）',
+  `to_location_id`      INT UNSIGNED DEFAULT NULL COMMENT '目标仓位（0 表示无仓位）',
+  `to_location_name`    VARCHAR(100) DEFAULT NULL COMMENT '目标仓位名称（快照）',
+  `reason`              VARCHAR(50)  DEFAULT NULL COMMENT '异动原因',
+  `remark`              VARCHAR(500) DEFAULT NULL,
+  `operator_id`         INT UNSIGNED DEFAULT NULL COMMENT '操作人，关联 tbl_users.id',
+  `operator_name`       VARCHAR(50)  DEFAULT NULL COMMENT '操作人展示名（快照）',
+  `created_at`          DATETIME     DEFAULT NULL COMMENT '异动时间',
+  `updated_at`          DATETIME     DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tbl_transfer_records_no` (`transfer_no`),
+  KEY `idx_tbl_transfer_records_product` (`product_id`),
+  KEY `idx_tbl_transfer_records_type` (`type`),
+  KEY `idx_tbl_transfer_records_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='样品异动记录表';
+
 -- =============================================
 -- 存量库增量升级（已有数据库时手动执行；新库由上方建表语句直接包含）
 -- 2026-09-21: 操作日志表增加商品名称快照列

@@ -155,6 +155,12 @@ func Setup() *gin.Engine {
 		admin.POST("/consumes/add", controllers.ConsumeCtl.DoAdd)
 		admin.GET("/consumes/api/products", controllers.ConsumeCtl.SearchProducts)
 
+		// 样品异动：人员转移与移仓
+		admin.GET("/transfers", controllers.TransferCtl.Page)
+		admin.GET("/transfers/api/samples", controllers.TransferCtl.Samples)
+		admin.POST("/transfers/owner", controllers.TransferCtl.DoOwnerTransfer)
+		admin.POST("/transfers/warehouse", controllers.TransferCtl.DoWarehouseTransfer)
+
 		// 操作日志
 		admin.GET("/logs", controllers.OperationLogCtl.List)
 
