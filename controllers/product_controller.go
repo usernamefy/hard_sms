@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -168,7 +169,7 @@ func (c *ProductController) Inventory(ctx *gin.Context) {
 		"owners":       users,
 		"departments":  departments,
 		"warehouses":   warehouses,
-		"locationJSON": string(locationBytes),
+		"locationJSON": template.JS(locationBytes),
 	}))
 }
 

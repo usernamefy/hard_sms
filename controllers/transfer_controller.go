@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -272,13 +273,15 @@ func (c *TransferController) renderPage(ctx *gin.Context, errMsg string, done [2
 		locationData = append(locationData, locationJSON{ID: l.ID, WarehouseID: l.WarehouseID, Name: l.Name})
 	}
 	locationBytes, _ := json.Marshal(locationData)
+	// template.JS 标记为安全 JS，避免模板把 JSON 输出成带引号的字符串导致前端无法遍历
+	safeLocationJSON := template.JS(locationBytes)
 
 	doneQty, _ := strconv.Atoi(done[0])
 	ctx.HTML(http.StatusOK, "transfer.html", userPageData(ctx, gin.H{
 		"title":        "样品异动 - 库存管理系统",
 		"users":        users,
 		"warehouses":   warehouses,
-		"locationJSON": string(locationBytes),
+		"locationJSON": safeLocationJSON,
 		"ownerReasons": models.TransferOwnerReasons,
 		"whReasons":    models.TransferWarehouseReasons,
 		"error":        errMsg,
