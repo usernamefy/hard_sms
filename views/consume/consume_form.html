@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260923-2">
+</head>
+<body class="admin-body">
+{{ template "topbar" . }}
+<div class="layout">
+    <aside class="sidebar">
+        <nav class="menu">
+            <a class="menu-item active" href="/">主页</a>
+            <a class="menu-item" href="/products">商品入库</a>
+            <a class="menu-item" href="/warehouses">仓库管理</a>
+            <a class="menu-item" href="/borrows">借用记录</a>
+            <a class="menu-item" href="javascript:void(0)">样品异动</a>
+            <a class="menu-item" href="javascript:void(0)">盘点管理</a>
+            <a class="menu-item" href="/users">用户管理</a>
+            <a class="menu-item" href="/logs">操作日志</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-head page-head-row">
+            <div>
+                <h2>新增消耗</h2>
+                <p>搜索商品创建消耗记录（消耗后将从库存扣除，不可撤销）</p>
+            </div>
+            <a class="btn btn-outline" href="/">返回首页</a>
+        </div>
+
+        {{ if .error }}
+        <div class="login-alert">{{ .error }}</div>
+        {{ end }}
+        {{ if gt .doneQty 0 }}
+        <div class="login-alert login-alert-success">消耗成功：消耗单「{{ .doneNo }}」共消耗 {{ .doneQty }} 件</div>
+        {{ end }}
+
+        <div class="login-alert warn-alert">⚠️ 重要提示：消耗的商品将直接从库存中扣除，此操作不可撤销，请确认后再提交。</div>
+
+        <div class="card form-card form-card-wide">
+            <div class="card-title">消耗信息</div>
+            <form method="post" action="/consumes/add" class="admin-form" id="consumeForm">
+                <div class="form-item form-item--full">
+                    <label for="productSearch">商品搜索 <em>*</em></label>
+                    <div class="borrow-search">
+                        <input type="text" id="productSearch" placeholder="输入 SN 码，回车搜索" autocomplete="off" autofocus>
+                        <button type="button" class="btn btn-ghost" id="btnSearch">搜索</button>
+                    </div>
+                    <div id="searchResults" class="product-card-list"></div>
+                    <p class="form-hint">搜索在库且有库存的商品并选择，将自动带出商品信息</p>
+                </div>
+
+                <input type="hidden" name="productId" id="productId" value="{{ if .form.ProductID }}{{ .form.ProductID }}{{ end }}">
+
+                <div class="form-item form-item--full">
+                    <div class="borrow-info-panel" id="productInfo" {{ if not .selected }}hidden{{ end }}>
+                        <div class="borrow-info-grid">
+                            <div>
+                                <div class="borrow-info-label">商品名称</div>
+                                <div class="borrow-info-value" id="infoName">{{ if .selected }}{{ .selected.Name }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">SKU 编码</div>
+                                <div class="borrow-info-value" id="infoSku">{{ if .selected }}{{ if .selected.SKU }}{{ .selected.SKU }}{{ else }}-{{ end }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">SN 码</div>
+                                <div class="borrow-info-value" id="infoSn">{{ if .selected }}{{ .selected.SN }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">在库数量</div>
+                                <div class="borrow-info-value stock-ok" id="infoStock">{{ if .selected }}{{ .selected.InStockQty }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">仓库</div>
+                                <div class="borrow-info-value" id="infoWarehouse">{{ if .selected }}{{ if .selected.WarehouseName }}{{ .selected.WarehouseName }}{{ else }}-{{ end }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">仓位</div>
+                                <div class="borrow-info-value" id="infoLocation">{{ if .selected }}{{ if .selected.LocationName }}{{ .selected.LocationName }}{{ else }}-{{ end }}{{ else }}-{{ end }}</div>
+                            </div>
+                            <div>
+                                <div class="borrow-info-label">库存状态</div>
+                                <div class="borrow-info-value">在库</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label for="consumeQuantity">消耗数量 <em>*</em></label>
+                    <input type="number" id="consumeQuantity" name="quantity" class="qty-input" min="1" step="1" value="1" data-stock="0" required>
+                    <p class="form-hint">消耗数量需在 1 ~ 在库数量 之间</p>
+                </div>
+
+                <div class="form-item">
+                    <label for="consumeNo">消耗单号</label>
+                    <input type="text" id="consumeNo" value="{{ .consumeNo }}" readonly>
+                </div>
+
+                <div class="form-item">
+                    <label for="consumerName">消耗人</label>
+                    <input type="text" id="consumerName" value="{{ .consumerName }}" readonly>
+                </div>
+
+                <div class="form-item">
+                    <label for="consumerDepartment">消耗人部门</label>
+                    <input type="text" id="consumerDepartment" value="{{ .department }}" readonly>
+                </div>
+
+                <div class="form-item">
+                    <label for="consumeTime">消耗时间</label>
+                    <input type="datetime-local" id="consumeTime" value="{{ .today }}" readonly>
+                </div>
+
+                <div class="form-item">
+                    <label for="consumeReason">消耗原因</label>
+                    <select id="consumeReason" name="reason">
+                        <option value="">请选择消耗原因</option>
+                        {{ range .reasons }}
+                        <option value="{{ . }}" {{ if eq . $.form.Reason }}selected{{ end }}>{{ . }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+
+                <div class="form-item form-item--full">
+                    <label for="remark">备注</label>
+                    <textarea id="remark" name="remark" maxlength="500" placeholder="请输入备注信息（可选）">{{ .form.Remark }}</textarea>
+                </div>
+
+                <div class="form-actions">
+                    <a class="btn btn-outline" href="/">取消</a>
+                    <button type="submit" class="btn btn-warning">确认消耗</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+(function () {
+    var searchInput = document.getElementById('productSearch');
+    var searchBtn = document.getElementById('btnSearch');
+    var resultBox = document.getElementById('searchResults');
+    var form = document.getElementById('consumeForm');
+    var productIdInput = document.getElementById('productId');
+    var qtyInput = document.getElementById('consumeQuantity');
+    var infoBox = document.getElementById('productInfo');
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function setText(id, text) {
+        document.getElementById(id).textContent = text;
+    }
+
+    function updateQtyState() {
+        var stock = Number(qtyInput.dataset.stock || 0);
+        var v = parseInt(qtyInput.value, 10);
+        var bad = isNaN(v) || v < 1 || v > stock;
+        qtyInput.classList.toggle('qty-error', bad);
+        return !bad;
+    }
+    qtyInput.addEventListener('input', updateQtyState);
+
+    // 选中商品：带出商品信息并设置消耗数量
+    function selectProduct(p) {
+        productIdInput.value = p.id;
+        setText('infoName', p.name || '-');
+        setText('infoSku', p.sku || '-');
+        setText('infoSn', p.sn || '-');
+        setText('infoStock', p.inStockQty);
+        setText('infoWarehouse', p.warehouseName || '-');
+        setText('infoLocation', p.locationName || '-');
+        qtyInput.dataset.stock = p.inStockQty;
+        qtyInput.max = p.inStockQty;
+        qtyInput.value = p.inStockQty;
+        updateQtyState();
+        infoBox.hidden = false;
+        resultBox.innerHTML = '';
+    }
+
+    function renderResults(list) {
+        resultBox.innerHTML = '';
+        if (!list || !list.length) {
+            var tip = document.createElement('div');
+            tip.className = 'search-empty';
+            tip.textContent = '未找到在库且有库存的商品';
+            resultBox.appendChild(tip);
+            return;
+        }
+        list.forEach(function (p) {
+            var card = document.createElement('div');
+            card.className = 'product-card';
+            var sub = 'SN 码：' + esc(p.sn) + (p.sku ? ' · SKU：' + esc(p.sku) : '');
+            var sub2 = '在库：' + p.inStockQty + ' · ' + esc(p.warehouseName || '-') + ' / ' + esc(p.locationName || '-');
+            card.innerHTML =
+                '<div class="product-thumb">🔥</div>' +
+                '<div class="product-info">' +
+                '<div class="product-name">' + esc(p.name) + '</div>' +
+                '<div class="product-sub">' + sub + '</div>' +
+                '<div class="product-sub">' + sub2 + '</div>' +
+                '</div>' +
+                '<div class="product-side">' +
+                '<button type="button" class="btn btn-primary btn-sm pick-product">选择</button>' +
+                '</div>';
+            card.querySelector('.pick-product').addEventListener('click', function () {
+                selectProduct(p);
+            });
+            resultBox.appendChild(card);
+        });
+    }
+
+    function doSearch() {
+        var q = searchInput.value.trim();
+        if (!q) return;
+        searchBtn.disabled = true;
+        fetch('/consumes/api/products?q=' + encodeURIComponent(q))
+            .then(function (res) { return res.json(); })
+            .then(function (data) { renderResults(data.products || []); })
+            .catch(function () { renderResults([]); })
+            .finally(function () { searchBtn.disabled = false; });
+    }
+
+    searchBtn.addEventListener('click', doSearch);
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            doSearch();
+        }
+    });
+
+    // 提交前校验（服务端事务内还会行锁重验）
+    form.addEventListener('submit', function (e) {
+        if (!productIdInput.value) {
+            e.preventDefault();
+            alert('请先搜索并选择要消耗的商品');
+            return;
+        }
+        if (!updateQtyState()) {
+            e.preventDefault();
+            alert('消耗数量需在 1 ~ 在库数量 之间');
+        }
+    });
+})();
+</script>
+</body>
+</html>

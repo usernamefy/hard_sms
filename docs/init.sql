@@ -196,6 +196,27 @@ CREATE TABLE IF NOT EXISTS `tbl_operation_logs` (
   KEY `idx_tbl_operation_logs_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';
 
+-- 10. 消耗记录表（一次消耗操作一条记录）
+CREATE TABLE IF NOT EXISTS `tbl_consume_records` (
+  `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `consume_no`          VARCHAR(50)  NOT NULL COMMENT '消耗单号（自动生成 CO+日期+序号，唯一）',
+  `product_id`          INT UNSIGNED NOT NULL COMMENT '商品，关联 tbl_products.id',
+  `product_name`        VARCHAR(100) NOT NULL COMMENT '商品名称快照',
+  `product_sn`          VARCHAR(50)  NOT NULL COMMENT 'SN 快照',
+  `quantity`            INT          NOT NULL COMMENT '消耗数量',
+  `reason`              VARCHAR(50)  DEFAULT NULL COMMENT '消耗原因',
+  `remark`              VARCHAR(500) DEFAULT NULL,
+  `consumer_id`         INT UNSIGNED DEFAULT NULL COMMENT '消耗人，关联 tbl_users.id',
+  `consumer_name`       VARCHAR(50)  DEFAULT NULL COMMENT '消耗人展示名（快照）',
+  `consumer_department` VARCHAR(50)  DEFAULT NULL COMMENT '消耗人部门（快照）',
+  `created_at`          DATETIME     DEFAULT NULL COMMENT '消耗时间',
+  `updated_at`          DATETIME     DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tbl_consume_records_no` (`consume_no`),
+  KEY `idx_tbl_consume_records_product` (`product_id`),
+  KEY `idx_tbl_consume_records_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消耗记录表';
+
 -- =============================================
 -- 存量库增量升级（已有数据库时手动执行；新库由上方建表语句直接包含）
 -- 2026-09-21: 操作日志表增加商品名称快照列
@@ -226,4 +247,6 @@ CREATE TABLE IF NOT EXISTS `tbl_operation_logs` (
 --   JOIN `tbl_users` u ON u.`username` = p.`owner_name` AND u.`deleted_at` IS NULL
 --   SET p.`owner_id` = u.`id` WHERE p.`owner_id` IS NULL;
 -- ALTER TABLE `tbl_products` DROP COLUMN `owner_name`, DROP COLUMN `owner_department`;
+-- 2026-09-23: 新增消耗记录表（新库由上方建表语句直接包含）
+-- CREATE TABLE IF NOT EXISTS `tbl_consume_records` ( ... 见上方第 9 节 ... );
 -- =============================================

@@ -80,6 +80,28 @@ a {
     color: #16a34a;
 }
 
+.warn-alert {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+    text-align: left;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: #fff;
+    border-color: #f59e0b;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
+.stock-ok {
+    color: #059669;
+    font-weight: 600;
+}
+
 /* 归还页借用信息面板 */
 .borrow-info-panel {
     background: #f9fafb;

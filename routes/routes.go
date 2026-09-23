@@ -150,6 +150,11 @@ func Setup() *gin.Engine {
 		admin.POST("/borrows/return", controllers.BorrowCtl.DoReturn)
 		admin.GET("/borrows/api/returnables", controllers.BorrowCtl.SearchReturnables)
 
+		// 消耗：独立页面（首页快捷操作进入），直接从库存扣除
+		admin.GET("/consumes/add", controllers.ConsumeCtl.Add)
+		admin.POST("/consumes/add", controllers.ConsumeCtl.DoAdd)
+		admin.GET("/consumes/api/products", controllers.ConsumeCtl.SearchProducts)
+
 		// 操作日志
 		admin.GET("/logs", controllers.OperationLogCtl.List)
 
